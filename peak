@@ -1,4 +1,4 @@
---hi
+--hii
 local Players      = game:GetService("Players")
 local UIS          = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -890,52 +890,6 @@ task.spawn(function()
         if ok and ping then
             pingLabel.Text = string.format("Ping: %d ms", ping)
         end
-    end
-end)
-
-minBtn.MouseButton1Click:Connect(function()
-    if closed then return end
-    minimized = not minimized
-    _closeCurrentPopup()
-
-    tw(minScale, {Scale = 0.82}, E.snap)
-    task.delay(0.1, function() tw(minScale, {Scale = 1}, E.spring) end)
-
-    if minimized then
-        minBtn.Text = "▢"
-        tw(minBtn, {Rotation = 90}, E.spring)
-        tw(headerLine, {BackgroundTransparency = 1}, E.snap)
-
-        searchBox.Visible = false
-        sidebar.Visible = false
-        content.Visible = false
-        footer.Visible = false
-        resizeHandle.Visible = false
-
-        local minW = hasBranding and 320 or 140
-        targetPos = targetPos + Vector2.new((targetSize.X - minW) * 0.5, 0)
-        targetSize = Vector2.new(minW, HEADER_H)
-        sizeVel = Vector2.new(-220, -180)
-        posVel = Vector2.new(0, -120)
-    else
-        minBtn.Text = "—"
-        tw(minBtn, {Rotation = 0}, E.spring)
-        tw(headerLine, {BackgroundTransparency = 0.55}, E.out)
-
-        targetPos = targetPos - Vector2.new((W - targetSize.X) * 0.5, 0)
-        targetSize = Vector2.new(W, H)
-        sizeVel = Vector2.new(240, 220)
-        posVel = Vector2.new(0, 120)
-
-        task.delay(0.08, function()
-            if not minimized and not closed then
-                sidebar.Visible = true
-                content.Visible = true
-                footer.Visible = true
-                searchBox.Visible = true
-                resizeHandle.Visible = true
-            end
-        end)
     end
 end)
 
@@ -2556,6 +2510,52 @@ UIS.InputChanged:Connect(function(input)
         W = newW
         H = newH
         targetSize = newSize
+    end
+end)
+
+minBtn.MouseButton1Click:Connect(function()
+    if closed then return end
+    minimized = not minimized
+    _closeCurrentPopup()
+
+    tw(minScale, {Scale = 0.82}, E.snap)
+    task.delay(0.1, function() tw(minScale, {Scale = 1}, E.spring) end)
+
+    if minimized then
+        minBtn.Text = "▢"
+        tw(minBtn, {Rotation = 90}, E.spring)
+        tw(headerLine, {BackgroundTransparency = 1}, E.snap)
+
+        searchBox.Visible = false
+        sidebar.Visible = false
+        content.Visible = false
+        footer.Visible = false
+        resizeHandle.Visible = false
+
+        local minW = hasBranding and 320 or 140
+        targetPos = targetPos + Vector2.new((targetSize.X - minW) * 0.5, 0)
+        targetSize = Vector2.new(minW, HEADER_H)
+        sizeVel = Vector2.new(-220, -180)
+        posVel = Vector2.new(0, -120)
+    else
+        minBtn.Text = "—"
+        tw(minBtn, {Rotation = 0}, E.spring)
+        tw(headerLine, {BackgroundTransparency = 0.55}, E.out)
+
+        targetPos = targetPos - Vector2.new((W - targetSize.X) * 0.5, 0)
+        targetSize = Vector2.new(W, H)
+        sizeVel = Vector2.new(240, 220)
+        posVel = Vector2.new(0, 120)
+
+        task.delay(0.08, function()
+            if not minimized and not closed then
+                sidebar.Visible = true
+                content.Visible = true
+                footer.Visible = true
+                searchBox.Visible = true
+                resizeHandle.Visible = true
+            end
+        end)
     end
 end)
 
