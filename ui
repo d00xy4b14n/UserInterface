@@ -751,11 +751,14 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 task.spawn(function()
-    while task.wait(1.5) do
-        local ok, v = pcall(function()
-            return StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
+    while task.wait(1) do 
+        local ok, ping = pcall(function()
+            return math.floor(localPlayer:GetNetworkPing() * 1000)
         end)
-        if ok and v then pingLabel.Text = string.format("%d ms", math.floor(v + 0.5)) end
+        
+        if ok and ping then
+            pingLabel.Text = string.format("Ping: %d ms", ping)
+        end
     end
 end)
 
