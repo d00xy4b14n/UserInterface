@@ -901,7 +901,7 @@ minBtn.MouseButton1Click:Connect(function()
     task.delay(0.1, function() tw(minScale, {Scale = 1}, E.spring) end)
 
     if minimized then
-        minBtn.Text = "□"
+        minBtn.Text = "▢"
         tw(minBtn, {Rotation = 90}, E.spring)
         tw(headerLine, {BackgroundTransparency = 1}, E.snap)
 
@@ -909,6 +909,7 @@ minBtn.MouseButton1Click:Connect(function()
         sidebar.Visible = false
         content.Visible = false
         footer.Visible = false
+        resizeHandle.Visible = false
 
         local minW = hasBranding and 320 or 140
         targetPos = targetPos + Vector2.new((targetSize.X - minW) * 0.5, 0)
@@ -931,6 +932,7 @@ minBtn.MouseButton1Click:Connect(function()
                 content.Visible = true
                 footer.Visible = true
                 searchBox.Visible = true
+                resizeHandle.Visible = true
             end
         end)
     end
