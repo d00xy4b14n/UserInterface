@@ -1,4 +1,4 @@
---sigma phonk mango edit but tuffer !!!
+--credits to gemini
 local Players      = game:GetService("Players")
 local UIS          = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -8,15 +8,16 @@ local StatsService = game:GetService("Stats")
 
 local C = {
     bg         = Color3.fromRGB(11, 11, 14),
-    bgLight    = Color3.fromRGB(19, 19, 24),
-    panel      = Color3.fromRGB(16, 16, 20),
-    card       = Color3.fromRGB(23, 23, 29),
-    cardHover  = Color3.fromRGB(30, 30, 38),
-    row        = Color3.fromRGB(28, 28, 35),
-    rowHover   = Color3.fromRGB(38, 38, 47),
-    rowActive  = Color3.fromRGB(48, 48, 58),
-    stroke     = Color3.fromRGB(52, 52, 64),
-    strokeGlow = Color3.fromRGB(115, 115, 135),
+    bgLight    = Color3.fromRGB(22, 22, 30),
+    panel      = Color3.fromRGB(16, 16, 21),
+    card       = Color3.fromRGB(23, 23, 30),
+    cardHover  = Color3.fromRGB(31, 31, 40),
+    row        = Color3.fromRGB(28, 28, 36),
+    rowHover   = Color3.fromRGB(38, 38, 48),
+    rowActive  = Color3.fromRGB(48, 48, 60),
+    stroke     = Color3.fromRGB(54, 54, 68),
+    strokeGlow = Color3.fromRGB(130, 130, 155),
+    specular   = Color3.fromRGB(255, 255, 255),
     accent     = Color3.fromRGB(245, 245, 250),
     accentSoft = Color3.fromRGB(185, 185, 200),
     text       = Color3.fromRGB(248, 248, 252),
@@ -29,12 +30,12 @@ local C = {
 }
 
 local T = {
-    window  = 0.14,
-    header  = 0.30,
-    sidebar = 0.32,
-    card    = 0.30,
-    row     = 0.35,
-    stroke  = 0.50,
+    window  = 0.12,
+    header  = 0.26,
+    sidebar = 0.28,
+    card    = 0.26,
+    row     = 0.32,
+    stroke  = 0.48,
 }
 
 local E = {
@@ -98,6 +99,53 @@ local function tw(obj, props, info)
     local a = TweenService:Create(obj, info or E.out, props)
     a:Play()
     return a
+end
+
+-- Creates a top-edge Fresnel glass reflection line on any frame
+local function addSpecularRim(parent, inset, maxAlpha)
+    inset = inset or 10
+    maxAlpha = maxAlpha or 0.45
+    local rim = mk("Frame", {
+        Name = "SpecularRim",
+        Size = UDim2.new(1, -inset * 2, 0, 1),
+        Position = UDim2.fromOffset(inset, 0),
+        BackgroundColor3 = C.specular,
+        BackgroundTransparency = maxAlpha,
+        BorderSizePixel = 0,
+        ZIndex = parent.ZIndex + 2,
+    }, parent)
+    local grad = mk("UIGradient", {
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 1),
+            NumberSequenceKeypoint.new(0.25, 0.25),
+            NumberSequenceKeypoint.new(0.5, 0),
+            NumberSequenceKeypoint.new(0.75, 0.25),
+            NumberSequenceKeypoint.new(1, 1),
+        }),
+    }, rim)
+    return rim, grad
+end
+
+-- Detects whether an icon is a Roblox Image Asset ID or a text symbol
+local function resolveIcon(icon)
+    if type(icon) == "number" then
+        return true, "rbxassetid://" .. tostring(icon)
+    end
+    if type(icon) ~= "string" then
+        return false, "◆"
+    end
+    local clean = icon:match("^%s*(.-)%s*$")
+    if clean == "" then
+        return false, "◆"
+    end
+    if clean:find("^rbxassetid://") or clean:find("^rbxthumb://") or clean:find("^https?://") then
+        return true, clean
+    end
+    local digitsOnly = clean:match("^id://(%d+)$") or clean:match("^:?id://(%d+)$") or clean:match("^(%d+)$")
+    if digitsOnly then
+        return true, "rbxassetid://" .. digitsOnly
+    end
+    return false, clean
 end
 
 local function rippleClick(btn, x, y)
@@ -364,15 +412,89 @@ local win = mk("Frame", {
     ClipsDescendants = true,
 }, anchor)
 corner(win, 16)
-local winStroke = stroke(win, C.strokeGlow, 1, 0.55)
 
-mk("UIGradient", {
+-- Live Cursor-Tracked Specular Border Stroke
+local winStroke = stroke(win, C.specular, 1.2, 0.32)
+local winStrokeGrad = mk("UIGradient", {
+    Rotation = 45,
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, C.accent),
+        ColorSequenceKeypoint.new(0.35, C.strokeGlow),
+        ColorSequenceKeypoint.new(0.7, C.stroke),
+        ColorSequenceKeypoint.new(1, C.accentSoft),
+    }),
+    Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.05),
+        NumberSequenceKeypoint.new(0.35, 0.45),
+        NumberSequenceKeypoint.new(0.75, 0.72),
+        NumberSequenceKeypoint.new(1, 0.20),
+    }),
+}, winStroke)
+
+local winBgGrad = mk("UIGradient", {
     Rotation = 65,
     Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, C.bgLight),
-        ColorSequenceKeypoint.new(1, C.bg),
+        ColorSequenceKeypoint.new(0.5, C.bg),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20)),
     }),
 }, win)
+
+-- Live Parallax Glass Reflection Sheen Layer
+local glassSheen = mk("Frame", {
+    Name = "GlassReflectionSheen",
+    Size = UDim2.fromScale(1.6, 1.6),
+    Position = UDim2.fromScale(-0.3, -0.3),
+    BackgroundColor3 = C.specular,
+    BackgroundTransparency = 0.91,
+    BorderSizePixel = 0,
+    Active = false,
+    ZIndex = 1,
+}, win)
+
+local sheenGrad = mk("UIGradient", {
+    Rotation = 32,
+    Color = ColorSequence.new(C.specular),
+    Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(0.36, 1),
+        NumberSequenceKeypoint.new(0.44, 0.42),
+        NumberSequenceKeypoint.new(0.47, 0.12),
+        NumberSequenceKeypoint.new(0.50, 0.78),
+        NumberSequenceKeypoint.new(0.56, 0.35),
+        NumberSequenceKeypoint.new(0.62, 1),
+        NumberSequenceKeypoint.new(1, 1),
+    }),
+}, glassSheen)
+
+-- Ambient Refraction Glow Orbs (drift behind glass cards)
+local ambientOrb1 = mk("Frame", {
+    Size = UDim2.fromOffset(240, 240),
+    Position = UDim2.fromScale(0.15, 0.2),
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    BackgroundColor3 = C.accent,
+    BackgroundTransparency = 0.94,
+    BorderSizePixel = 0,
+    Active = false,
+    ZIndex = 1,
+}, win)
+corner(ambientOrb1, 999)
+UI:BindToAccent(ambientOrb1, "BackgroundColor3", false)
+
+local ambientOrb2 = mk("Frame", {
+    Size = UDim2.fromOffset(280, 280),
+    Position = UDim2.fromScale(0.82, 0.78),
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    BackgroundColor3 = C.accentSoft,
+    BackgroundTransparency = 0.95,
+    BorderSizePixel = 0,
+    Active = false,
+    ZIndex = 1,
+}, win)
+corner(ambientOrb2, 999)
+UI:BindToAccent(ambientOrb2, "BackgroundColor3", true)
+
+local _, winTopRimGrad = addSpecularRim(win, 18, 0.35)
 
 local header = mk("Frame", {
     Name = "Header",
@@ -380,16 +502,26 @@ local header = mk("Frame", {
     BackgroundColor3 = C.panel,
     BackgroundTransparency = T.header,
     BorderSizePixel = 0,
+    ZIndex = 2,
 }, win)
 corner(header, 16)
 
 local headerLine = mk("Frame", {
     Size = UDim2.new(1, -28, 0, 1),
     Position = UDim2.new(0, 14, 1, -1),
-    BackgroundColor3 = C.stroke,
-    BackgroundTransparency = 0.55,
+    BackgroundColor3 = C.specular,
+    BackgroundTransparency = 0.45,
     BorderSizePixel = 0,
 }, header)
+local headerLineGrad = mk("UIGradient", {
+    Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.85),
+        NumberSequenceKeypoint.new(0.3, 0.2),
+        NumberSequenceKeypoint.new(0.5, 0),
+        NumberSequenceKeypoint.new(0.7, 0.2),
+        NumberSequenceKeypoint.new(1, 0.85),
+    }),
+}, headerLine)
 
 local logoTile = mk("Frame", {
     Size = UDim2.fromOffset(32, 32),
@@ -519,6 +651,7 @@ local searchBox = mk("Frame", {
 }, rightCluster)
 corner(searchBox, 15)
 local searchStroke = stroke(searchBox, C.stroke, 1, 0.5)
+addSpecularRim(searchBox, 10, 0.65)
 
 local searchIconHolder = mk("Frame", {
     Size = UDim2.fromOffset(14, 14),
@@ -650,9 +783,24 @@ local sidebar = mk("Frame", {
     BackgroundColor3 = C.panel,
     BackgroundTransparency = T.sidebar,
     BorderSizePixel = 0,
+    ZIndex = 2,
 }, win)
 corner(sidebar, 13)
-stroke(sidebar, C.stroke, 1, 0.6)
+local sidebarStroke = stroke(sidebar, C.specular, 1, 0.45)
+local sidebarStrokeGrad = mk("UIGradient", {
+    Rotation = 90,
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, C.accentSoft),
+        ColorSequenceKeypoint.new(0.5, C.stroke),
+        ColorSequenceKeypoint.new(1, C.strokeGlow),
+    }),
+    Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.25),
+        NumberSequenceKeypoint.new(0.5, 0.65),
+        NumberSequenceKeypoint.new(1, 0.35),
+    }),
+}, sidebarStroke)
+addSpecularRim(sidebar, 10, 0.52)
 
 local indicator = mk("Frame", {
     Size = UDim2.fromOffset(3, 18),
@@ -686,6 +834,7 @@ local content = mk("Frame", {
     Size = UDim2.new(1, -(SIDEBAR_W + 20), 1, -(HEADER_H + FOOTER_H)),
     Position = UDim2.fromOffset(SIDEBAR_W + 16, HEADER_H),
     BackgroundTransparency = 1,
+    ZIndex = 2,
 }, win)
 
 local pageTitle = mk("TextLabel", {
@@ -705,6 +854,7 @@ local footer = mk("Frame", {
     BackgroundColor3 = C.panel,
     BackgroundTransparency = T.header,
     BorderSizePixel = 0,
+    ZIndex = 2,
 }, win)
 corner(footer, 16)
 
@@ -951,9 +1101,13 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 local frames, elapsed = 0, 0
+local reflectionClock = 0
+
 RunService.RenderStepped:Connect(function(dt)
     frames += 1
     elapsed += dt
+    reflectionClock += dt
+
     if elapsed >= 0.5 then
         fpsLabel.Text = string.format("%d fps", math.floor(frames / elapsed + 0.5))
         frames, elapsed = 0, 0
@@ -1006,6 +1160,44 @@ RunService.RenderStepped:Connect(function(dt)
 
     anchor.Size = UDim2.fromOffset(curW, curH)
     anchor.Position = UDim2.fromOffset(renderX, renderY)
+
+    -- Live Reflections & Parallax Shimmer Calculation
+    if not closed then
+        local mousePos = UIS:GetMouseLocation()
+        local winCenter = Vector2.new(renderX + curW * 0.5, renderY + curH * 0.5)
+        local rel = mousePos - winCenter
+
+        -- Point border reflection gradients toward cursor angle
+        local angleDeg = math.deg(math.atan2(rel.Y, rel.X))
+        winStrokeGrad.Rotation = angleDeg
+        sidebarStrokeGrad.Rotation = (angleDeg * 0.6) + 45
+
+        -- Parallax glass sheen offset + idle breathing sweep
+        local normX = math.clamp(rel.X / math.max(curW, 1), -0.6, 0.6)
+        local normY = math.clamp(rel.Y / math.max(curH, 1), -0.6, 0.6)
+        local idleWave = math.sin(reflectionClock * 0.85) * 0.14
+
+        sheenGrad.Offset = Vector2.new(
+            normX * 0.28 + idleWave + (posVel.X * 0.0004),
+            normY * 0.22 - (posVel.Y * 0.0004)
+        )
+        sheenGrad.Rotation = 30 + (normX * 14)
+
+        -- Shimmer top specular rims
+        local rimShift = math.sin(reflectionClock * 1.4) * 0.22 + (normX * 0.25)
+        winTopRimGrad.Offset = Vector2.new(rimShift, 0)
+        headerLineGrad.Offset = Vector2.new(-rimShift * 0.8, 0)
+
+        -- Subtle background refraction orb drift
+        ambientOrb1.Position = UDim2.fromScale(
+            0.22 + math.sin(reflectionClock * 0.5) * 0.08 - normX * 0.05,
+            0.28 + math.cos(reflectionClock * 0.4) * 0.08 - normY * 0.05
+        )
+        ambientOrb2.Position = UDim2.fromScale(
+            0.78 + math.cos(reflectionClock * 0.45) * 0.08 + normX * 0.05,
+            0.74 + math.sin(reflectionClock * 0.55) * 0.08 + normY * 0.05
+        )
+    end
 end)
 
 task.spawn(function()
@@ -1037,7 +1229,21 @@ function Section.new(parent, title, tabRef)
         AutomaticSize = Enum.AutomaticSize.Y,
     }, parent)
     corner(frame, 12)
-    local secStroke = stroke(frame, C.stroke, 1, 0.55)
+    local secStroke = stroke(frame, C.stroke, 1, 0.48)
+    local secStrokeGrad = mk("UIGradient", {
+        Rotation = 35,
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, C.specular),
+            ColorSequenceKeypoint.new(0.4, C.strokeGlow),
+            ColorSequenceKeypoint.new(1, C.stroke),
+        }),
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.25),
+            NumberSequenceKeypoint.new(0.5, 0.60),
+            NumberSequenceKeypoint.new(1, 0.45),
+        }),
+    }, secStroke)
+
     list(frame, 6)
     pad(frame, 10, 12, 10, 12)
 
@@ -1071,12 +1277,14 @@ function Section.new(parent, title, tabRef)
     end
 
     frame.MouseEnter:Connect(function()
-        tw(frame, {BackgroundColor3 = C.cardHover, BackgroundTransparency = 0.22}, E.snap)
-        tw(secStroke, {Color = C.strokeGlow, Transparency = 0.35}, E.snap)
+        tw(frame, {BackgroundColor3 = C.cardHover, BackgroundTransparency = 0.18}, E.snap)
+        tw(secStroke, {Color = C.strokeGlow, Transparency = 0.22}, E.snap)
+        tw(secStrokeGrad, {Rotation = 125}, E.glide)
     end)
     frame.MouseLeave:Connect(function()
         tw(frame, {BackgroundColor3 = C.card, BackgroundTransparency = T.card}, E.snap)
-        tw(secStroke, {Color = C.stroke, Transparency = 0.55}, E.snap)
+        tw(secStroke, {Color = C.stroke, Transparency = 0.48}, E.snap)
+        tw(secStrokeGrad, {Rotation = 35}, E.glide)
     end)
 
     self.frame = frame
@@ -1101,7 +1309,8 @@ function Section:Toggle(name, default, callback, opts)
         BorderSizePixel = 0,
     }, self.frame)
     corner(row, 9)
-    local rStroke = stroke(row, C.stroke, 1, 0.7)
+    local rStroke = stroke(row, C.stroke, 1, 0.65)
+    addSpecularRim(row, 8, 0.72)
 
     if opts.Tooltip then UI:AttachTooltip(row, opts.Tooltip) end
 
@@ -1164,12 +1373,12 @@ function Section:Toggle(name, default, callback, opts)
     end
 
     btn.MouseEnter:Connect(function()
-        tw(row, {BackgroundColor3 = C.rowHover, BackgroundTransparency = 0.22}, E.snap)
-        tw(rStroke, {Transparency = 0.4}, E.snap)
+        tw(row, {BackgroundColor3 = C.rowHover, BackgroundTransparency = 0.18}, E.snap)
+        tw(rStroke, {Color = C.strokeGlow, Transparency = 0.35}, E.snap)
     end)
     btn.MouseLeave:Connect(function()
         tw(row, {BackgroundColor3 = C.row, BackgroundTransparency = T.row}, E.snap)
-        tw(rStroke, {Transparency = 0.7}, E.snap)
+        tw(rStroke, {Color = C.stroke, Transparency = 0.65}, E.snap)
     end)
     btn.MouseButton1Click:Connect(function() setState(not state, true) end)
 
@@ -1198,7 +1407,8 @@ function Section:Slider(name, min, max, default, callback, opts)
         BorderSizePixel = 0,
     }, self.frame)
     corner(row, 9)
-    local rStroke = stroke(row, C.stroke, 1, 0.7)
+    local rStroke = stroke(row, C.stroke, 1, 0.65)
+    addSpecularRim(row, 8, 0.72)
 
     if opts.Tooltip then UI:AttachTooltip(row, opts.Tooltip) end
 
@@ -1333,13 +1543,13 @@ function Section:Slider(name, min, max, default, callback, opts)
 
     row.MouseEnter:Connect(function()
         hovered = true
-        tw(row, {BackgroundColor3 = C.rowHover, BackgroundTransparency = 0.22}, E.snap)
-        tw(rStroke, {Transparency = 0.4}, E.snap)
+        tw(row, {BackgroundColor3 = C.rowHover, BackgroundTransparency = 0.18}, E.snap)
+        tw(rStroke, {Color = C.strokeGlow, Transparency = 0.35}, E.snap)
     end)
     row.MouseLeave:Connect(function()
         hovered = false
         tw(row, {BackgroundColor3 = C.row, BackgroundTransparency = T.row}, E.snap)
-        tw(rStroke, {Transparency = 0.7}, E.snap)
+        tw(rStroke, {Color = C.stroke, Transparency = 0.65}, E.snap)
     end)
 
     return self:_track(name, row, {
@@ -1384,7 +1594,8 @@ function Section:Dropdown(name, options, default, callback, isMulti, opts)
         BorderSizePixel = 0,
     }, self.frame)
     corner(row, 9)
-    stroke(row, C.stroke, 1, 0.7)
+    local rStroke = stroke(row, C.stroke, 1, 0.65)
+    addSpecularRim(row, 8, 0.72)
 
     if opts.Tooltip then UI:AttachTooltip(row, opts.Tooltip) end
 
@@ -1426,6 +1637,15 @@ function Section:Dropdown(name, options, default, callback, isMulti, opts)
         TextSize = 12,
     }, btn)
 
+    row.MouseEnter:Connect(function()
+        tw(row, {BackgroundColor3 = C.rowHover, BackgroundTransparency = 0.18}, E.snap)
+        tw(rStroke, {Color = C.strokeGlow, Transparency = 0.35}, E.snap)
+    end)
+    row.MouseLeave:Connect(function()
+        tw(row, {BackgroundColor3 = C.row, BackgroundTransparency = T.row}, E.snap)
+        tw(rStroke, {Color = C.stroke, Transparency = 0.65}, E.snap)
+    end)
+
     local self_ref = {Options = listOpts, Index = idx, Callback = callback}
     local tabRef = self.tab
 
@@ -1462,6 +1682,7 @@ function Section:Dropdown(name, options, default, callback, isMulti, opts)
         })
         corner(popup, 9)
         stroke(popup, C.strokeGlow, 1, 0.35)
+        addSpecularRim(popup, 8, 0.45)
 
         local optionButtons = {}
 
@@ -1640,7 +1861,8 @@ function Section:ColorPicker(name, default, callback, opts)
         BorderSizePixel = 0,
     }, self.frame)
     corner(row, 9)
-    stroke(row, C.stroke, 1, 0.7)
+    local rStroke = stroke(row, C.stroke, 1, 0.65)
+    addSpecularRim(row, 8, 0.72)
 
     if opts.Tooltip then UI:AttachTooltip(row, opts.Tooltip) end
 
@@ -1676,6 +1898,15 @@ function Section:ColorPicker(name, default, callback, opts)
     }, row)
     corner(swatch, 6)
     local swStroke = stroke(swatch, C.accent, 1, 0.4)
+
+    row.MouseEnter:Connect(function()
+        tw(row, {BackgroundColor3 = C.rowHover, BackgroundTransparency = 0.18}, E.snap)
+        tw(rStroke, {Color = C.strokeGlow, Transparency = 0.35}, E.snap)
+    end)
+    row.MouseLeave:Connect(function()
+        tw(row, {BackgroundColor3 = C.row, BackgroundTransparency = T.row}, E.snap)
+        tw(rStroke, {Color = C.stroke, Transparency = 0.65}, E.snap)
+    end)
 
     local paletteColors = {
         Color3.fromRGB(255, 255, 255), Color3.fromRGB(210, 210, 220), Color3.fromRGB(150, 150, 165), Color3.fromRGB(95, 95, 110),   Color3.fromRGB(45, 45, 55),    Color3.fromRGB(15, 15, 20),
@@ -1721,6 +1952,7 @@ function Section:ColorPicker(name, default, callback, opts)
         })
         corner(popup, 10)
         stroke(popup, C.strokeGlow, 1, 0.3)
+        addSpecularRim(popup, 8, 0.45)
         pad(popup, 8, 8, 8, 8)
         list(popup, 7)
 
@@ -1914,7 +2146,6 @@ function Section:ColorPicker(name, default, callback, opts)
             end
         end)
 
-        -- Action Row: Copy, Paste, Rainbow
         local utilRow = mk("Frame", {
             Size = UDim2.new(1, 0, 0, 22),
             BackgroundTransparency = 1,
@@ -2010,7 +2241,8 @@ function Section:Input(name, default, callback, opts)
         BorderSizePixel = 0,
     }, self.frame)
     corner(row, 9)
-    stroke(row, C.stroke, 1, 0.7)
+    local rStroke = stroke(row, C.stroke, 1, 0.65)
+    addSpecularRim(row, 8, 0.72)
 
     if opts.Tooltip then UI:AttachTooltip(row, opts.Tooltip) end
 
@@ -2044,6 +2276,15 @@ function Section:Input(name, default, callback, opts)
     pad(box, 0, 8, 0, 8)
     local bStroke = stroke(box, C.stroke, 1, 0.5)
 
+    row.MouseEnter:Connect(function()
+        tw(row, {BackgroundColor3 = C.rowHover, BackgroundTransparency = 0.18}, E.snap)
+        tw(rStroke, {Color = C.strokeGlow, Transparency = 0.35}, E.snap)
+    end)
+    row.MouseLeave:Connect(function()
+        tw(row, {BackgroundColor3 = C.row, BackgroundTransparency = T.row}, E.snap)
+        tw(rStroke, {Color = C.stroke, Transparency = 0.65}, E.snap)
+    end)
+
     box.Focused:Connect(function() tw(bStroke, {Color = C.accent, Transparency = 0.2}, E.snap) end)
     box.FocusLost:Connect(function()
         tw(bStroke, {Color = C.stroke, Transparency = 0.5}, E.snap)
@@ -2074,12 +2315,13 @@ function Section:Button(name, callback, opts)
     corner(btn, 9)
     local bStroke = stroke(btn, C.stroke, 1, 0.55)
     local sc = mk("UIScale", {Scale = 1}, btn)
+    addSpecularRim(btn, 8, 0.68)
 
     if opts.Tooltip then UI:AttachTooltip(btn, opts.Tooltip) end
 
     btn.MouseEnter:Connect(function()
         tw(btn, {BackgroundColor3 = C.rowHover, BackgroundTransparency = 0.15}, E.snap)
-        tw(bStroke, {Color = C.strokeGlow, Transparency = 0.25}, E.snap)
+        tw(bStroke, {Color = C.strokeGlow, Transparency = 0.22}, E.snap)
     end)
     btn.MouseLeave:Connect(function()
         tw(sc, {Scale = 1}, E.out)
@@ -2170,7 +2412,8 @@ function Section:Keybind(name, default, callback, opts)
         BorderSizePixel = 0,
     }, self.frame)
     corner(row, 9)
-    local rStroke = stroke(row, C.stroke, 1, 0.7)
+    local rStroke = stroke(row, C.stroke, 1, 0.65)
+    addSpecularRim(row, 8, 0.72)
 
     if opts.Tooltip then UI:AttachTooltip(row, opts.Tooltip) end
 
@@ -2270,12 +2513,12 @@ function Section:Keybind(name, default, callback, opts)
     end
 
     row.MouseEnter:Connect(function()
-        tw(row, {BackgroundColor3 = C.rowHover, BackgroundTransparency = 0.22}, E.snap)
-        tw(rStroke, {Transparency = 0.4}, E.snap)
+        tw(row, {BackgroundColor3 = C.rowHover, BackgroundTransparency = 0.18}, E.snap)
+        tw(rStroke, {Color = C.strokeGlow, Transparency = 0.35}, E.snap)
     end)
     row.MouseLeave:Connect(function()
         tw(row, {BackgroundColor3 = C.row, BackgroundTransparency = T.row}, E.snap)
-        tw(rStroke, {Transparency = 0.7}, E.snap)
+        tw(rStroke, {Color = C.stroke, Transparency = 0.65}, E.snap)
     end)
 
     btn.MouseButton1Click:Connect(startListening)
@@ -2414,18 +2657,40 @@ function Tab.new(name, icon, order)
         BorderSizePixel = 0,
         Text = "",
         AutoButtonColor = false,
+        ClipsDescendants = true,
     }, holder)
     corner(btn, 9)
 
-    local iconLbl = mk("TextLabel", {
-        Size = UDim2.fromOffset(20, 20),
-        Position = UDim2.fromOffset(10, 6),
-        BackgroundTransparency = 1,
-        Text = icon or "◆",
-        TextColor3 = C.textFaint,
-        Font = Enum.Font.GothamBold,
-        TextSize = 12,
-    }, btn)
+    local tabRim = addSpecularRim(btn, 8, 1)
+
+    -- Smart Icon Resolver (supports both rbxassetid:// images and text/emoji symbols)
+    local isImg, resolvedIcon = resolveIcon(icon)
+    local iconObj
+    local iconColorProp
+
+    if isImg then
+        iconColorProp = "ImageColor3"
+        iconObj = mk("ImageLabel", {
+            Size = UDim2.fromOffset(16, 16),
+            Position = UDim2.fromOffset(12, 8),
+            BackgroundTransparency = 1,
+            Image = resolvedIcon,
+            ImageColor3 = C.textFaint,
+            ScaleType = Enum.ScaleType.Fit,
+        }, btn)
+    else
+        iconColorProp = "TextColor3"
+        iconObj = mk("TextLabel", {
+            Size = UDim2.fromOffset(20, 20),
+            Position = UDim2.fromOffset(10, 6),
+            BackgroundTransparency = 1,
+            Text = resolvedIcon,
+            TextColor3 = C.textFaint,
+            Font = Enum.Font.GothamBold,
+            TextSize = 12,
+            ClipsDescendants = true,
+        }, btn)
+    end
 
     local label = mk("TextLabel", {
         Size = UDim2.new(1, -38, 1, 0),
@@ -2436,6 +2701,7 @@ function Tab.new(name, icon, order)
         Font = Enum.Font.GothamMedium,
         TextSize = 12,
         TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
     }, btn)
 
     local scroll = mk("ScrollingFrame", {
@@ -2457,7 +2723,9 @@ function Tab.new(name, icon, order)
 
     self.holder = holder
     self.btn = btn
-    self.iconLbl = iconLbl
+    self.iconObj = iconObj
+    self.iconColorProp = iconColorProp
+    self.tabRim = tabRim
     self.label = label
     self.scroll = scroll
     self.scrollPad = scrollPad
@@ -2467,14 +2735,16 @@ function Tab.new(name, icon, order)
         _closeCurrentPopup()
         if activeTab then
             tw(activeTab.btn, {BackgroundTransparency = 1}, E.out)
+            tw(activeTab.tabRim, {BackgroundTransparency = 1}, E.out)
             tw(activeTab.label, {TextColor3 = C.textDim, Position = UDim2.fromOffset(34, 0)}, E.out)
-            tw(activeTab.iconLbl, {TextColor3 = C.textFaint}, E.out)
+            tw(activeTab.iconObj, {[activeTab.iconColorProp] = C.textFaint}, E.out)
             activeTab.scroll.Visible = false
         end
         activeTab = self
-        tw(btn, {BackgroundTransparency = 0.35}, E.out)
+        tw(btn, {BackgroundTransparency = 0.28}, E.out)
+        tw(tabRim, {BackgroundTransparency = 0.45}, E.out)
         tw(label, {TextColor3 = C.text, Position = UDim2.fromOffset(38, 0)}, E.spring)
-        tw(iconLbl, {TextColor3 = C.accent}, E.out)
+        tw(iconObj, {[iconColorProp] = C.accent}, E.out)
 
         scroll.Visible = true
         scrollPad.PaddingTop = UDim.new(0, 14)
@@ -2496,14 +2766,18 @@ function Tab.new(name, icon, order)
 
     btn.MouseEnter:Connect(function()
         if activeTab ~= self then
-            tw(btn, {BackgroundTransparency = 0.65}, E.snap)
+            tw(btn, {BackgroundTransparency = 0.62}, E.snap)
+            tw(tabRim, {BackgroundTransparency = 0.68}, E.snap)
             tw(label, {TextColor3 = C.text, Position = UDim2.fromOffset(36, 0)}, E.snap)
+            tw(iconObj, {[iconColorProp] = C.accentSoft}, E.snap)
         end
     end)
     btn.MouseLeave:Connect(function()
         if activeTab ~= self then
             tw(btn, {BackgroundTransparency = 1}, E.snap)
+            tw(tabRim, {BackgroundTransparency = 1}, E.snap)
             tw(label, {TextColor3 = C.textDim, Position = UDim2.fromOffset(34, 0)}, E.snap)
+            tw(iconObj, {[iconColorProp] = C.textFaint}, E.snap)
         end
     end)
     btn.MouseButton1Click:Connect(function() self:Select() end)
@@ -2639,7 +2913,7 @@ local function toggleUI()
         stretchVel = Vector2.new(95, -60)
         tw(anchorScale, {Scale = 1}, E.spring)
         tw(win, {BackgroundTransparency = T.window}, E.out)
-        tw(winStroke, {Transparency = 0.55}, E.out)
+        tw(winStroke, {Transparency = 0.32}, E.out)
         for _, sh in ipairs(shadowRefs) do
             tw(sh.frame, {BackgroundTransparency = sh.trans}, E.out)
         end
@@ -2751,7 +3025,8 @@ function UI.Notify(title, contentText, duration, notifyType)
     corner(toast, 12)
 
     local toastScale = mk("UIScale", {Scale = 0.86}, toast)
-    local tStroke = stroke(toast, palette.Accent, 1, 0.45)
+    local tStroke = stroke(toast, palette.Accent, 1, 0.42)
+    addSpecularRim(toast, 12, 0.35)
 
     mk("UIGradient", {
         Rotation = 15,
@@ -2907,7 +3182,7 @@ function UI.Notify(title, contentText, duration, notifyType)
     toast.MouseLeave:Connect(function()
         entry.paused = false
         tw(toastScale, {Scale = 1.0}, E.out)
-        tw(tStroke, {Transparency = 0.45}, E.snap)
+        tw(tStroke, {Transparency = 0.42}, E.snap)
     end)
 
     task.defer(function()
@@ -3220,7 +3495,7 @@ minBtn.MouseButton1Click:Connect(function()
     else
         minBtn.Text = "—"
         tw(minBtn, {Rotation = 0}, E.spring)
-        tw(headerLine, {BackgroundTransparency = 0.55}, E.out)
+        tw(headerLine, {BackgroundTransparency = 0.45}, E.out)
 
         targetPos = targetPos - Vector2.new((W - targetSize.X) * 0.5, 0)
         targetSize = Vector2.new(W, H)
