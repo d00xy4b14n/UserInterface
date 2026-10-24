@@ -1,4 +1,5 @@
---sigma phonk mango edit but tuffer !!!
+--credits to me.
+
 local Players      = game:GetService("Players")
 local UIS          = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -105,7 +106,7 @@ end
 -- Creates a top-edge Fresnel glass reflection line on any frame
 local function addSpecularRim(parent, inset, maxAlpha)
     inset = inset or 10
-    maxAlpha = maxAlpha or 0.45
+    maxAlpha = maxAlpha or 0.55
     local rim = mk("Frame", {
         Name = "SpecularRim",
         Size = UDim2.new(1, -inset * 2, 0, 1),
@@ -118,9 +119,9 @@ local function addSpecularRim(parent, inset, maxAlpha)
     local grad = mk("UIGradient", {
         Transparency = NumberSequence.new({
             NumberSequenceKeypoint.new(0, 1),
-            NumberSequenceKeypoint.new(0.25, 0.25),
+            NumberSequenceKeypoint.new(0.25, 0.35),
             NumberSequenceKeypoint.new(0.5, 0),
-            NumberSequenceKeypoint.new(0.75, 0.25),
+            NumberSequenceKeypoint.new(0.75, 0.35),
             NumberSequenceKeypoint.new(1, 1),
         }),
     }, rim)
@@ -408,12 +409,12 @@ for _, layer in ipairs(shadowLayers) do
     table.insert(shadowRefs, {frame = sh, trans = layer.trans})
 end
 
--- CanvasGroup enables hardware-accelerated GroupTransparency so the entire UI fades cohesively
+-- CanvasGroup with pure white GroupColor3 so child elements are NEVER darkened
 local win = mk("CanvasGroup", {
     Name = "Window",
     Size = UDim2.fromScale(1, 1),
-    BackgroundColor3 = C.bg,
-    BackgroundTransparency = T.window,
+    BackgroundTransparency = 1,
+    GroupColor3 = Color3.fromRGB(255, 255, 255),
     GroupTransparency = 0,
     BorderSizePixel = 0,
     Active = true,
@@ -421,8 +422,28 @@ local win = mk("CanvasGroup", {
 }, anchor)
 corner(win, 16)
 
+-- Dedicated background surface Frame so UIGradient only tints the background, NOT the whole CanvasGroup
+local bgSurface = mk("Frame", {
+    Name = "BgSurface",
+    Size = UDim2.fromScale(1, 1),
+    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+    BackgroundTransparency = T.window,
+    BorderSizePixel = 0,
+    ZIndex = 0,
+}, win)
+corner(bgSurface, 16)
+
+mk("UIGradient", {
+    Rotation = 65,
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, C.bgLight),
+        ColorSequenceKeypoint.new(0.55, C.bg),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(14, 14, 19)),
+    }),
+}, bgSurface)
+
 -- Live Cursor-Tracked Specular Border Stroke
-local winStroke = stroke(win, C.specular, 1.2, 0.32)
+local winStroke = stroke(win, C.specular, 1.2, 0.35)
 local winStrokeGrad = mk("UIGradient", {
     Rotation = 45,
     Color = ColorSequence.new({
@@ -439,22 +460,13 @@ local winStrokeGrad = mk("UIGradient", {
     }),
 }, winStroke)
 
-local winBgGrad = mk("UIGradient", {
-    Rotation = 65,
-    Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, C.bgLight),
-        ColorSequenceKeypoint.new(0.5, C.bg),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20)),
-    }),
-}, win)
-
--- Live Parallax Glass Reflection Sheen Layer
+-- Subtle Parallax Glass Sheen Layer (sits behind UI panels on ZIndex 1)
 local glassSheen = mk("Frame", {
     Name = "GlassReflectionSheen",
-    Size = UDim2.fromScale(1.6, 1.6),
-    Position = UDim2.fromScale(-0.3, -0.3),
+    Size = UDim2.fromScale(1.5, 1.5),
+    Position = UDim2.fromScale(-0.25, -0.25),
     BackgroundColor3 = C.specular,
-    BackgroundTransparency = 0.91,
+    BackgroundTransparency = 0.94,
     BorderSizePixel = 0,
     Active = false,
     ZIndex = 1,
@@ -465,44 +477,16 @@ local sheenGrad = mk("UIGradient", {
     Color = ColorSequence.new(C.specular),
     Transparency = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(0.36, 1),
-        NumberSequenceKeypoint.new(0.44, 0.42),
-        NumberSequenceKeypoint.new(0.47, 0.12),
-        NumberSequenceKeypoint.new(0.50, 0.78),
-        NumberSequenceKeypoint.new(0.56, 0.35),
+        NumberSequenceKeypoint.new(0.38, 1),
+        NumberSequenceKeypoint.new(0.46, 0.35),
+        NumberSequenceKeypoint.new(0.50, 0.05),
+        NumberSequenceKeypoint.new(0.54, 0.45),
         NumberSequenceKeypoint.new(0.62, 1),
         NumberSequenceKeypoint.new(1, 1),
     }),
 }, glassSheen)
 
--- Ambient Refraction Glow Orbs
-local ambientOrb1 = mk("Frame", {
-    Size = UDim2.fromOffset(240, 240),
-    Position = UDim2.fromScale(0.15, 0.2),
-    AnchorPoint = Vector2.new(0.5, 0.5),
-    BackgroundColor3 = C.accent,
-    BackgroundTransparency = 0.94,
-    BorderSizePixel = 0,
-    Active = false,
-    ZIndex = 1,
-}, win)
-corner(ambientOrb1, 999)
-UI:BindToAccent(ambientOrb1, "BackgroundColor3", false)
-
-local ambientOrb2 = mk("Frame", {
-    Size = UDim2.fromOffset(280, 280),
-    Position = UDim2.fromScale(0.82, 0.78),
-    AnchorPoint = Vector2.new(0.5, 0.5),
-    BackgroundColor3 = C.accentSoft,
-    BackgroundTransparency = 0.95,
-    BorderSizePixel = 0,
-    Active = false,
-    ZIndex = 1,
-}, win)
-corner(ambientOrb2, 999)
-UI:BindToAccent(ambientOrb2, "BackgroundColor3", true)
-
-local _, winTopRimGrad = addSpecularRim(win, 18, 0.35)
+local _, winTopRimGrad = addSpecularRim(win, 18, 0.42)
 
 local header = mk("Frame", {
     Name = "Header",
@@ -518,7 +502,7 @@ local headerLine = mk("Frame", {
     Size = UDim2.new(1, -28, 0, 1),
     Position = UDim2.new(0, 14, 1, -1),
     BackgroundColor3 = C.specular,
-    BackgroundTransparency = 0.45,
+    BackgroundTransparency = 0.48,
     BorderSizePixel = 0,
 }, header)
 local headerLineGrad = mk("UIGradient", {
@@ -1248,15 +1232,6 @@ RunService.RenderStepped:Connect(function(dt)
         local rimShift = math.sin(reflectionClock * 1.4) * 0.22 + (normX * 0.25)
         winTopRimGrad.Offset = Vector2.new(rimShift, 0)
         headerLineGrad.Offset = Vector2.new(-rimShift * 0.8, 0)
-
-        ambientOrb1.Position = UDim2.fromScale(
-            0.22 + math.sin(reflectionClock * 0.5) * 0.08 - normX * 0.05,
-            0.28 + math.cos(reflectionClock * 0.4) * 0.08 - normY * 0.05
-        )
-        ambientOrb2.Position = UDim2.fromScale(
-            0.78 + math.cos(reflectionClock * 0.45) * 0.08 + normX * 0.05,
-            0.74 + math.sin(reflectionClock * 0.55) * 0.08 + normY * 0.05
-        )
     end
 end)
 
@@ -3247,7 +3222,7 @@ local function toggleUI(notifyOnClose)
 
         tw(slideValue, {Value = 28}, E.closeAnim)
         tw(anchorScale, {Scale = 0.88}, E.closeAnim)
-        tw(win, {GroupTransparency = 1, BackgroundTransparency = 1}, E.closeAnim)
+        tw(win, {GroupTransparency = 1}, E.closeAnim)
         tw(winStroke, {Transparency = 1}, E.closeAnim)
         for _, sh in ipairs(shadowRefs) do
             tw(sh.frame, {BackgroundTransparency = 1}, E.closeAnim)
@@ -3264,7 +3239,6 @@ local function toggleUI(notifyOnClose)
         anchorScale.Scale = 0.88
         slideValue.Value = -22
         win.GroupTransparency = 1
-        win.BackgroundTransparency = 1
         winStroke.Transparency = 1
 
         posVel = Vector2.zero
@@ -3272,8 +3246,8 @@ local function toggleUI(notifyOnClose)
 
         tw(slideValue, {Value = 0}, E.openAnim)
         tw(anchorScale, {Scale = 1}, E.openAnim)
-        tw(win, {GroupTransparency = 0, BackgroundTransparency = T.window}, E.out)
-        tw(winStroke, {Transparency = 0.32}, E.out)
+        tw(win, {GroupTransparency = 0}, E.out)
+        tw(winStroke, {Transparency = 0.35}, E.out)
         for _, sh in ipairs(shadowRefs) do
             tw(sh.frame, {BackgroundTransparency = sh.trans}, E.out)
         end
@@ -3291,7 +3265,6 @@ closeBtn.MouseButton1Click:Connect(function()
 end)
 
 UIS.InputBegan:Connect(function(input)
-    -- Ignore while typing in chat or any TextBox, or when rebinding a key
     if UIS:GetFocusedTextBox() or _anyKeybindListening then return end
     if input.UserInputType == Enum.UserInputType.Keyboard then
         if input.KeyCode == UI.ToggleKey or input.KeyCode == UI.SecondaryToggleKey then
@@ -3590,7 +3563,7 @@ minBtn.MouseButton1Click:Connect(function()
     else
         minBtn.Text = "—"
         tw(minBtn, {Rotation = 0}, E.spring)
-        tw(headerLine, {BackgroundTransparency = 0.45}, E.out)
+        tw(headerLine, {BackgroundTransparency = 0.48}, E.out)
 
         targetPos = targetPos - Vector2.new((W - targetSize.X) * 0.5, 0)
         targetSize = Vector2.new(W, H)
