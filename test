@@ -1,4 +1,4 @@
---credits to gemini
+--sigma phonk mango edit but tuffer !!!
 local Players      = game:GetService("Players")
 local UIS          = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -39,11 +39,12 @@ local T = {
 }
 
 local E = {
-    snap   = TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    out    = TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    glide  = TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    spring = TweenInfo.new(0.40, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-    close  = TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+    snap      = TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    out       = TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    glide     = TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    spring    = TweenInfo.new(0.40, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+    openAnim  = TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+    closeAnim = TweenInfo.new(0.26, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut),
 }
 
 local function getParent()
@@ -220,10 +221,13 @@ local function keyName(keyCode)
         LeftControl = "L.Ctrl", RightControl = "R.Ctrl",
         LeftAlt = "L.Alt", RightAlt = "R.Alt",
         Return = "Enter", BackSpace = "Backspace",
-        CapsLock = "Caps",
+        CapsLock = "Caps", Insert = "Insert",
+        RightBracket = "]", LeftBracket = "[",
     }
     return short[name] or name
 end
+
+local _anyKeybindListening = false
 
 local UI = {
     Controls = {},
@@ -233,6 +237,8 @@ local UI = {
     _accentBindings = {},
     _u3name = nil,
     _u3version = nil,
+    ToggleKey = Enum.KeyCode.RightShift,
+    SecondaryToggleKey = Enum.KeyCode.RightControl,
     NotificationPosition = "TopCenter", -- "TopCenter" | "TopRight" | "TopLeft"
 }
 
@@ -358,7 +364,7 @@ task.spawn(function()
     task.wait(0.2)
     spinConn:Disconnect()
     tw(loadScreen, {BackgroundTransparency = 1}, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out))
-    tw(loadCenter, {Position = UDim2.new(0.5, -110, 0.5, -80)}, E.close)
+    tw(loadCenter, {Position = UDim2.new(0.5, -110, 0.5, -80)}, E.closeAnim)
     tw(loadTitle, {TextTransparency = 1}, E.snap)
     tw(loadSub, {TextTransparency = 1}, E.snap)
     task.wait(0.5)
@@ -402,11 +408,13 @@ for _, layer in ipairs(shadowLayers) do
     table.insert(shadowRefs, {frame = sh, trans = layer.trans})
 end
 
-local win = mk("Frame", {
+-- CanvasGroup enables hardware-accelerated GroupTransparency so the entire UI fades cohesively
+local win = mk("CanvasGroup", {
     Name = "Window",
     Size = UDim2.fromScale(1, 1),
     BackgroundColor3 = C.bg,
     BackgroundTransparency = T.window,
+    GroupTransparency = 0,
     BorderSizePixel = 0,
     Active = true,
     ClipsDescendants = true,
@@ -467,7 +475,7 @@ local sheenGrad = mk("UIGradient", {
     }),
 }, glassSheen)
 
--- Ambient Refraction Glow Orbs (drift behind glass cards)
+-- Ambient Refraction Glow Orbs
 local ambientOrb1 = mk("Frame", {
     Size = UDim2.fromOffset(240, 240),
     Position = UDim2.fromScale(0.15, 0.2),
@@ -866,16 +874,68 @@ mk("Frame", {
     BorderSizePixel = 0,
 }, footer)
 
-mk("TextLabel", {
-    Size = UDim2.new(0, 200, 1, 0),
-    Position = UDim2.fromOffset(16, 0),
-    BackgroundTransparency = 1,
-    Text = "hi",
-    TextColor3 = C.textFaint,
-    Font = Enum.Font.Gotham,
-    TextSize = 11,
+-- Interactive Reopen Keybind Pill in Footer
+local toggleKeyPill = mk("TextButton", {
+    Size = UDim2.fromOffset(148, 20),
+    Position = UDim2.fromOffset(12, 4),
+    BackgroundColor3 = C.row,
+    BackgroundTransparency = 0.45,
+    BorderSizePixel = 0,
+    Text = "  Toggle UI: [" .. keyName(UI.ToggleKey) .. "]",
+    TextColor3 = C.textDim,
+    Font = Enum.Font.GothamMedium,
+    TextSize = 10,
     TextXAlignment = Enum.TextXAlignment.Left,
+    AutoButtonColor = false,
 }, footer)
+corner(toggleKeyPill, 6)
+local togglePillStroke = stroke(toggleKeyPill, C.stroke, 1, 0.6)
+
+local rebindingToggleKey = false
+
+function UI:SetToggleKey(newKey)
+    if typeof(newKey) == "EnumItem" and newKey.EnumType == Enum.KeyCode then
+        self.ToggleKey = newKey
+        toggleKeyPill.Text = "  Toggle UI: [" .. keyName(newKey) .. "]"
+    end
+end
+
+toggleKeyPill.MouseEnter:Connect(function()
+    tw(toggleKeyPill, {BackgroundColor3 = C.rowHover, BackgroundTransparency = 0.2, TextColor3 = C.text}, E.snap)
+    tw(togglePillStroke, {Color = C.accentSoft, Transparency = 0.3}, E.snap)
+end)
+toggleKeyPill.MouseLeave:Connect(function()
+    if not rebindingToggleKey then
+        tw(toggleKeyPill, {BackgroundColor3 = C.row, BackgroundTransparency = 0.45, TextColor3 = C.textDim}, E.snap)
+        tw(togglePillStroke, {Color = C.stroke, Transparency = 0.6}, E.snap)
+    end
+end)
+
+toggleKeyPill.MouseButton1Click:Connect(function()
+    if rebindingToggleKey then return end
+    rebindingToggleKey = true
+    _anyKeybindListening = true
+    toggleKeyPill.Text = "  Press any key..."
+    tw(toggleKeyPill, {BackgroundColor3 = C.accent, BackgroundTransparency = 0.1, TextColor3 = C.bg}, E.snap)
+
+    local conn
+    conn = UIS.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            conn:Disconnect()
+            if input.KeyCode ~= Enum.KeyCode.Escape and input.KeyCode ~= Enum.KeyCode.Unknown then
+                UI:SetToggleKey(input.KeyCode)
+            else
+                toggleKeyPill.Text = "  Toggle UI: [" .. keyName(UI.ToggleKey) .. "]"
+            end
+            tw(toggleKeyPill, {BackgroundColor3 = C.row, BackgroundTransparency = 0.45, TextColor3 = C.textDim}, E.snap)
+            tw(togglePillStroke, {Color = C.stroke, Transparency = 0.6}, E.snap)
+            task.delay(0.1, function()
+                rebindingToggleKey = false
+                _anyKeybindListening = false
+            end)
+        end
+    end)
+end)
 
 local fpsLabel = mk("TextLabel", {
     Size = UDim2.new(0, 40, 1, 0),
@@ -1080,6 +1140,7 @@ local dragStartMouse = Vector2.zero
 local dragStartPos = Vector2.zero
 
 header.InputBegan:Connect(function(input)
+    if closed then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStartMouse = Vector2.new(input.Position.X, input.Position.Y)
@@ -1102,6 +1163,7 @@ end)
 
 local frames, elapsed = 0, 0
 local reflectionClock = 0
+local closeYOffset = 0
 
 RunService.RenderStepped:Connect(function(dt)
     frames += 1
@@ -1112,6 +1174,8 @@ RunService.RenderStepped:Connect(function(dt)
         fpsLabel.Text = string.format("%d fps", math.floor(frames / elapsed + 0.5))
         frames, elapsed = 0, 0
     end
+
+    if not anchor.Visible then return end
 
     local step = math.min(dt, 0.033)
 
@@ -1156,7 +1220,7 @@ RunService.RenderStepped:Connect(function(dt)
     local curH = math.max(HEADER_H, math.floor(currentSize.Y + stretchOffset.Y + 0.5))
 
     local renderX = math.floor(currentPos.X - stretchOffset.X * 0.5 + 0.5)
-    local renderY = math.floor(currentPos.Y - stretchOffset.Y * 0.5 + 0.5)
+    local renderY = math.floor(currentPos.Y - stretchOffset.Y * 0.5 + closeYOffset + 0.5)
 
     anchor.Size = UDim2.fromOffset(curW, curH)
     anchor.Position = UDim2.fromOffset(renderX, renderY)
@@ -1167,12 +1231,10 @@ RunService.RenderStepped:Connect(function(dt)
         local winCenter = Vector2.new(renderX + curW * 0.5, renderY + curH * 0.5)
         local rel = mousePos - winCenter
 
-        -- Point border reflection gradients toward cursor angle
         local angleDeg = math.deg(math.atan2(rel.Y, rel.X))
         winStrokeGrad.Rotation = angleDeg
         sidebarStrokeGrad.Rotation = (angleDeg * 0.6) + 45
 
-        -- Parallax glass sheen offset + idle breathing sweep
         local normX = math.clamp(rel.X / math.max(curW, 1), -0.6, 0.6)
         local normY = math.clamp(rel.Y / math.max(curH, 1), -0.6, 0.6)
         local idleWave = math.sin(reflectionClock * 0.85) * 0.14
@@ -1183,12 +1245,10 @@ RunService.RenderStepped:Connect(function(dt)
         )
         sheenGrad.Rotation = 30 + (normX * 14)
 
-        -- Shimmer top specular rims
         local rimShift = math.sin(reflectionClock * 1.4) * 0.22 + (normX * 0.25)
         winTopRimGrad.Offset = Vector2.new(rimShift, 0)
         headerLineGrad.Offset = Vector2.new(-rimShift * 0.8, 0)
 
-        -- Subtle background refraction orb drift
         ambientOrb1.Position = UDim2.fromScale(
             0.22 + math.sin(reflectionClock * 0.5) * 0.08 - normX * 0.05,
             0.28 + math.cos(reflectionClock * 0.4) * 0.08 - normY * 0.05
@@ -2462,6 +2522,7 @@ function Section:Keybind(name, default, callback, opts)
     local function stopListening()
         if not listening then return end
         listening = false
+        task.delay(0.05, function() _anyKeybindListening = false end)
         if listenConn then listenConn:Disconnect(); listenConn = nil end
         tw(keyChip, {BackgroundColor3 = C.bg, BackgroundTransparency = 0.25}, E.snap)
         tw(keyChipStroke, {Color = C.stroke, Transparency = 0.45}, E.snap)
@@ -2472,6 +2533,7 @@ function Section:Keybind(name, default, callback, opts)
     local function startListening()
         if listening then stopListening(); return end
         listening = true
+        _anyKeybindListening = true
 
         tw(keyChip, {BackgroundColor3 = C.accent, BackgroundTransparency = 0.08}, E.snap)
         tw(keyChipStroke, {Color = C.accent, Transparency = 0.15}, E.snap)
@@ -2663,7 +2725,6 @@ function Tab.new(name, icon, order)
 
     local tabRim = addSpecularRim(btn, 8, 1)
 
-    -- Smart Icon Resolver (supports both rbxassetid:// images and text/emoji symbols)
     local isImg, resolvedIcon = resolveIcon(icon)
     local iconObj
     local iconColorProp
@@ -2874,61 +2935,6 @@ searchInput:GetPropertyChangedSignal("Text"):Connect(function()
 
     if searching and firstValidTab and (not matchedTabs[activeTab]) then
         firstValidTab:Select()
-    end
-end)
-
-local animBusy = false
-local function toggleUI()
-    if animBusy then return end
-    animBusy = true
-    closed = not closed
-    _closeCurrentPopup()
-
-    if closed then
-        task.spawn(function()
-            local name = UI:GetAutoLoadName()
-            if name and name ~= "" then UI:SaveConfig(name) end
-        end)
-
-        posVel = Vector2.new(0, 200)
-        stretchVel = Vector2.new(-90, 65)
-        tw(anchorScale, {Scale = 0.78}, E.close)
-        tw(win, {BackgroundTransparency = 1}, E.out)
-        tw(winStroke, {Transparency = 1}, E.out)
-        for _, sh in ipairs(shadowRefs) do
-            tw(sh.frame, {BackgroundTransparency = 1}, E.out)
-        end
-
-        task.delay(0.24, function()
-            if closed then gui.Enabled = false end
-            animBusy = false
-        end)
-    else
-        gui.Enabled = true
-        anchorScale.Scale = 0.80
-        win.BackgroundTransparency = 1
-        winStroke.Transparency = 1
-
-        posVel = Vector2.new(0, -180)
-        stretchVel = Vector2.new(95, -60)
-        tw(anchorScale, {Scale = 1}, E.spring)
-        tw(win, {BackgroundTransparency = T.window}, E.out)
-        tw(winStroke, {Transparency = 0.32}, E.out)
-        for _, sh in ipairs(shadowRefs) do
-            tw(sh.frame, {BackgroundTransparency = sh.trans}, E.out)
-        end
-
-        task.delay(0.26, function()
-            animBusy = false
-        end)
-    end
-end
-
-closeBtn.MouseButton1Click:Connect(toggleUI)
-UIS.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if input.KeyCode == Enum.KeyCode.RightControl then
-        toggleUI()
     end
 end)
 
@@ -3204,6 +3210,95 @@ function UI.Notify(title, contentText, duration, notifyType)
 
     return entry
 end
+
+-- ============================================================================
+-- SMOOTH CANVASGROUP CLOSE & REOPEN ANIMATION
+-- ============================================================================
+local animBusy = false
+local slideValue = mk("NumberValue", {Value = 0}, gui)
+slideValue:GetPropertyChangedSignal("Value"):Connect(function()
+    closeYOffset = slideValue.Value
+end)
+
+local function toggleUI(notifyOnClose)
+    if animBusy then return end
+    animBusy = true
+    closed = not closed
+    dragging = false
+    _closeCurrentPopup()
+
+    if closed then
+        task.spawn(function()
+            local name = UI:GetAutoLoadName()
+            if name and name ~= "" then UI:SaveConfig(name) end
+        end)
+
+        if notifyOnClose then
+            UI.Notify({
+                Title    = "Menu Hidden",
+                Content  = string.format("Press [%s] or [%s] anytime to reopen.", keyName(UI.ToggleKey), keyName(UI.SecondaryToggleKey)),
+                Duration = 3.5,
+                Type     = "Info",
+            })
+        end
+
+        posVel = Vector2.zero
+        stretchVel = Vector2.zero
+
+        tw(slideValue, {Value = 28}, E.closeAnim)
+        tw(anchorScale, {Scale = 0.88}, E.closeAnim)
+        tw(win, {GroupTransparency = 1, BackgroundTransparency = 1}, E.closeAnim)
+        tw(winStroke, {Transparency = 1}, E.closeAnim)
+        for _, sh in ipairs(shadowRefs) do
+            tw(sh.frame, {BackgroundTransparency = 1}, E.closeAnim)
+        end
+
+        task.delay(0.26, function()
+            if closed then
+                anchor.Visible = false
+            end
+            animBusy = false
+        end)
+    else
+        anchor.Visible = true
+        anchorScale.Scale = 0.88
+        slideValue.Value = -22
+        win.GroupTransparency = 1
+        win.BackgroundTransparency = 1
+        winStroke.Transparency = 1
+
+        posVel = Vector2.zero
+        stretchVel = Vector2.new(28, -18)
+
+        tw(slideValue, {Value = 0}, E.openAnim)
+        tw(anchorScale, {Scale = 1}, E.openAnim)
+        tw(win, {GroupTransparency = 0, BackgroundTransparency = T.window}, E.out)
+        tw(winStroke, {Transparency = 0.32}, E.out)
+        for _, sh in ipairs(shadowRefs) do
+            tw(sh.frame, {BackgroundTransparency = sh.trans}, E.out)
+        end
+
+        task.delay(0.32, function()
+            animBusy = false
+        end)
+    end
+end
+
+UI.Toggle = function() toggleUI(false) end
+
+closeBtn.MouseButton1Click:Connect(function()
+    toggleUI(true)
+end)
+
+UIS.InputBegan:Connect(function(input)
+    -- Ignore while typing in chat or any TextBox, or when rebinding a key
+    if UIS:GetFocusedTextBox() or _anyKeybindListening then return end
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        if input.KeyCode == UI.ToggleKey or input.KeyCode == UI.SecondaryToggleKey then
+            toggleUI(false)
+        end
+    end
+end)
 
 local CONFIG_FOLDER = "d00xy4b14n's User Interface (hopper is a femboy)"
 local AUTOLOAD_FILE = CONFIG_FOLDER .. "/__autoload__.txt"
