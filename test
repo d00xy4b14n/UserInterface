@@ -1,4 +1,5 @@
--- // Credits only to me.
+--ur not allowed here lad
+print("hello i am a skid pls ban me owner")
 
 local Players      = game:GetService("Players")
 local UIS          = game:GetService("UserInputService")
@@ -41,10 +42,10 @@ local T = {
 
 local E = {
     snap   = TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    out    = TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    glide  = TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    spring = TweenInfo.new(0.40, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-    close  = TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+    out    = TweenInfo.new(0.20, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    glide  = TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    spring = TweenInfo.new(0.36, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+    close  = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.In),
 }
 
 local function getParent()
@@ -499,7 +500,7 @@ local ambientOrb2 = mk("Frame", {
 corner(ambientOrb2, 999)
 UI:BindToAccent(ambientOrb2, "BackgroundColor3", true)
 
-local _, winTopRimGrad = addSpecularRim(win, 18, 0.35)
+local winTopRim, winTopRimGrad = addSpecularRim(win, 18, 0.35)
 
 local header = mk("Frame", {
     Name = "Header",
@@ -1066,11 +1067,9 @@ local targetSize = Vector2.new(W, H)
 local currentSize = targetSize
 local sizeVel = Vector2.zero
 
-local stretchOffset = Vector2.zero
-local stretchVel = Vector2.zero
-
 local minimized = false
 local closed = false
+local animBusy = false
 
 anchor.Position = UDim2.fromOffset(currentPos.X, currentPos.Y)
 
@@ -1138,7 +1137,7 @@ local dragStartMouse = Vector2.zero
 local dragStartPos = Vector2.zero
 
 header.InputBegan:Connect(function(input)
-    if closed then return end
+    if closed or animBusy then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStartMouse = Vector2.new(input.Position.X, input.Position.Y)
@@ -1161,11 +1160,16 @@ end)
 
 local frames, elapsed = 0, 0
 local reflectionClock = 0
+local shimmerAccum = 0
+local lastRenderW, lastRenderH = W, H
+local lastRenderX, lastRenderY = -99999, -99999
+local closeYOffset = 0
 
 RunService.RenderStepped:Connect(function(dt)
     frames += 1
     elapsed += dt
     reflectionClock += dt
+    shimmerAccum += dt
 
     if elapsed >= 0.5 then
         fpsLabel.Text = string.format("%d fps", math.floor(frames / elapsed + 0.5))
@@ -1181,7 +1185,7 @@ RunService.RenderStepped:Connect(function(dt)
         currentPos = targetPos
         posVel = Vector2.zero
     else
-        local posForce = disp * 150 - posVel * 16
+        local posForce = disp * 165 - posVel * 18
         posVel = posVel + posForce * step
         currentPos = currentPos + posVel * step
     end
@@ -1196,46 +1200,35 @@ RunService.RenderStepped:Connect(function(dt)
         currentSize = currentSize + sizeVel * step
     end
 
-    local vx = math.abs(posVel.X)
-    local vy = math.abs(posVel.Y)
+    local curW = math.max(120, math.floor(currentSize.X + 0.5))
+    local curH = math.max(HEADER_H, math.floor(currentSize.Y + 0.5))
 
-    local desiredX = math.clamp(vx * 0.015 - vy * 0.005, -10, 22)
-    local desiredY = math.clamp(vy * 0.015 - vx * 0.005, -10, 22)
-    local desiredStretch = Vector2.new(desiredX, desiredY)
-
-    local stretchDiff = desiredStretch - stretchOffset
-    if not dragging and stretchDiff.Magnitude < 0.25 and stretchVel.Magnitude < 1.5 then
-        stretchOffset = Vector2.zero
-        stretchVel = Vector2.zero
-    else
-        local sForce = stretchDiff * 140 - stretchVel * 15
-        stretchVel = stretchVel + sForce * step
-        stretchOffset = stretchOffset + stretchVel * step
+    -- Only touch anchor.Size when resizing or minimizing (never during dragging or open/close)
+    if curW ~= lastRenderW or curH ~= lastRenderH then
+        lastRenderW, lastRenderH = curW, curH
+        anchor.Size = UDim2.fromOffset(curW, curH)
     end
 
-    local curW = math.max(120, math.floor(currentSize.X + stretchOffset.X + 0.5))
-    local curH = math.max(HEADER_H, math.floor(currentSize.Y + stretchOffset.Y + 0.5))
-
-    -- Compensate for anchorScale so close/open scaling always zooms from the exact window center
     local s = anchorScale.Scale
-    local renderX = math.floor(currentPos.X - stretchOffset.X * 0.5 + curW * (1 - s) * 0.5 + 0.5)
-    local renderY = math.floor(currentPos.Y - stretchOffset.Y * 0.5 + curH * (1 - s) * 0.5 + 0.5)
+    local renderX = math.floor(currentPos.X + curW * (1 - s) * 0.5 + 0.5)
+    local renderY = math.floor(currentPos.Y + curH * (1 - s) * 0.5 + closeYOffset + 0.5)
 
-    anchor.Size = UDim2.fromOffset(curW, curH)
-    anchor.Position = UDim2.fromOffset(renderX, renderY)
+    if renderX ~= lastRenderX or renderY ~= lastRenderY then
+        lastRenderX, lastRenderY = renderX, renderY
+        anchor.Position = UDim2.fromOffset(renderX, renderY)
+    end
 
-    -- Live Reflections & Parallax Shimmer Calculation
-    if not closed then
+    -- Throttled Live Reflections (paused during open/close animations for 0-lag transitions)
+    if not closed and not animBusy and not minimized and shimmerAccum >= 0.022 then
+        shimmerAccum = 0
         local mousePos = UIS:GetMouseLocation()
         local winCenter = Vector2.new(currentPos.X + curW * 0.5, currentPos.Y + curH * 0.5)
         local rel = mousePos - winCenter
 
-        -- Point border reflection gradients toward cursor angle
         local angleDeg = math.deg(math.atan2(rel.Y, rel.X))
         winStrokeGrad.Rotation = angleDeg
         sidebarStrokeGrad.Rotation = (angleDeg * 0.6) + 45
 
-        -- Parallax glass sheen offset + idle breathing sweep
         local normX = math.clamp(rel.X / math.max(curW, 1), -0.6, 0.6)
         local normY = math.clamp(rel.Y / math.max(curH, 1), -0.6, 0.6)
         local idleWave = math.sin(reflectionClock * 0.85) * 0.14
@@ -1246,12 +1239,10 @@ RunService.RenderStepped:Connect(function(dt)
         )
         sheenGrad.Rotation = 30 + (normX * 14)
 
-        -- Shimmer top specular rims
         local rimShift = math.sin(reflectionClock * 1.4) * 0.22 + (normX * 0.25)
         winTopRimGrad.Offset = Vector2.new(rimShift, 0)
         headerLineGrad.Offset = Vector2.new(-rimShift * 0.8, 0)
 
-        -- Subtle background refraction orb drift
         ambientOrb1.Position = UDim2.fromScale(
             0.22 + math.sin(reflectionClock * 0.5) * 0.08 - normX * 0.05,
             0.28 + math.cos(reflectionClock * 0.4) * 0.08 - normY * 0.05
@@ -2684,8 +2675,10 @@ function DependencyBox:SetupDependencies(deps)
                     end
                 end
             end
-            self.frame.Visible = allMet
-            task.wait(0.05)
+            if self.frame.Visible ~= allMet then
+                self.frame.Visible = allMet
+            end
+            task.wait(0.12)
         end
     end)
 end
@@ -3215,10 +3208,26 @@ function UI.Notify(title, contentText, duration, notifyType)
 end
 
 -- ============================================================================
--- CENTER-ANCHORED CLOSE & REOPEN ANIMATION
+-- ZERO-LAG TWO-STAGE SHELL CLOSE & REOPEN ANIMATION
 -- ============================================================================
-local animBusy = false
-local function toggleUI(notifyOnClose)
+local slideOffsetVal = mk("NumberValue", {Value = 0}, gui)
+slideOffsetVal:GetPropertyChangedSignal("Value"):Connect(function()
+    closeYOffset = slideOffsetVal.Value
+    lastRenderX = -99999 -- Force position update on slide
+end)
+
+local _saveQueued = false
+local function queueAutoSave()
+    if _saveQueued then return end
+    _saveQueued = true
+    task.delay(0.45, function()
+        _saveQueued = false
+        local name = UI:GetAutoLoadName()
+        if name and name ~= "" then UI:SaveConfig(name) end
+    end)
+end
+
+local function toggleUI()
     if animBusy then return end
     animBusy = true
     closed = not closed
@@ -3226,30 +3235,37 @@ local function toggleUI(notifyOnClose)
     _closeCurrentPopup()
 
     if closed then
-        task.spawn(function()
-            local name = UI:GetAutoLoadName()
-            if name and name ~= "" then UI:SaveConfig(name) end
-        end)
+        queueAutoSave()
 
-        if notifyOnClose then
-            UI.Notify({
-                Title    = "Menu Hidden",
-                Content  = string.format("Press [%s] or [%s] anytime to reopen.", keyName(UI.ToggleKey), keyName(UI.SecondaryToggleKey)),
-                Duration = 3.5,
-                Type     = "Info",
-            })
-        end
+        -- Hide heavy descendant trees BEFORE scaling so 0 AutomaticSize layouts recalculate
+        content.Visible = false
+        sidebar.Visible = false
+        footer.Visible = false
+        searchBox.Visible = false
+        resizeHandle.Visible = false
+        rightCluster.Visible = false
+        logoTile.Visible = false
+        titleLbl.Visible = false
+        subtitleLbl.Visible = false
+        headerLine.Visible = false
+        glassSheen.Visible = false
+        ambientOrb1.Visible = false
+        ambientOrb2.Visible = false
+        winTopRim.Visible = false
 
         posVel = Vector2.zero
-        stretchVel = Vector2.zero
 
-        tw(anchorScale, {Scale = 0}, TweenInfo.new(0.26, Enum.EasingStyle.Back, Enum.EasingDirection.In))
-        tw(winStroke, {Transparency = 1}, E.snap)
+        local closeInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+        tw(slideOffsetVal, {Value = 18}, closeInfo)
+        tw(anchorScale, {Scale = 0.88}, closeInfo)
+        tw(win, {BackgroundTransparency = 1}, closeInfo)
+        tw(header, {BackgroundTransparency = 1}, closeInfo)
+        tw(winStroke, {Transparency = 1}, closeInfo)
         for _, sh in ipairs(shadowRefs) do
-            tw(sh.frame, {BackgroundTransparency = 1}, E.out)
+            tw(sh.frame, {BackgroundTransparency = 1}, closeInfo)
         end
 
-        task.delay(0.26, function()
+        task.delay(0.16, function()
             if closed then
                 anchor.Visible = false
             end
@@ -3257,35 +3273,63 @@ local function toggleUI(notifyOnClose)
         end)
     else
         anchor.Visible = true
-        anchorScale.Scale = 0
-        win.BackgroundTransparency = T.window
-        winStroke.Transparency = 0.32
+        anchorScale.Scale = 0.88
+        slideOffsetVal.Value = 16
+        win.BackgroundTransparency = 1
+        header.BackgroundTransparency = 1
+        winStroke.Transparency = 1
 
-        posVel = Vector2.new(0, -90)
-        stretchVel = Vector2.new(35, -25)
+        posVel = Vector2.zero
 
-        tw(anchorScale, {Scale = 1}, E.spring)
+        local openInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+        tw(slideOffsetVal, {Value = 0}, openInfo)
+        tw(anchorScale, {Scale = 1}, openInfo)
+        tw(win, {BackgroundTransparency = T.window}, openInfo)
+        tw(header, {BackgroundTransparency = T.header}, openInfo)
+        tw(winStroke, {Transparency = 0.32}, openInfo)
         for _, sh in ipairs(shadowRefs) do
-            tw(sh.frame, {BackgroundTransparency = sh.trans}, E.out)
+            tw(sh.frame, {BackgroundTransparency = sh.trans}, openInfo)
         end
 
-        task.delay(0.32, function()
+        -- Reveal inner controls right as the glass shell finishes scaling (zero layout lag)
+        task.delay(0.14, function()
+            if not closed then
+                anchorScale.Scale = 1
+                rightCluster.Visible = true
+                glassSheen.Visible = true
+                ambientOrb1.Visible = true
+                ambientOrb2.Visible = true
+                winTopRim.Visible = true
+                refreshBranding()
+
+                if not minimized then
+                    headerLine.Visible = true
+                    sidebar.Visible = true
+                    content.Visible = true
+                    footer.Visible = true
+                    searchBox.Visible = true
+                    resizeHandle.Visible = true
+
+                    if activeTab and activeTab.scrollPad then
+                        activeTab.scrollPad.PaddingTop = UDim.new(0, 10)
+                        tw(activeTab.scrollPad, {PaddingTop = UDim.new(0, 2)}, E.out)
+                    end
+                end
+            end
             animBusy = false
         end)
     end
 end
 
-UI.Toggle = function() toggleUI(false) end
+UI.Toggle = toggleUI
 
-closeBtn.MouseButton1Click:Connect(function()
-    toggleUI(true)
-end)
+closeBtn.MouseButton1Click:Connect(toggleUI)
 
 UIS.InputBegan:Connect(function(input)
     if UIS:GetFocusedTextBox() or _anyKeybindListening then return end
     if input.UserInputType == Enum.UserInputType.Keyboard then
         if input.KeyCode == UI.ToggleKey or input.KeyCode == UI.SecondaryToggleKey then
-            toggleUI(false)
+            toggleUI()
         end
     end
 end)
@@ -3554,7 +3598,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 minBtn.MouseButton1Click:Connect(function()
-    if closed then return end
+    if closed or animBusy then return end
     minimized = not minimized
     _closeCurrentPopup()
 
@@ -3564,7 +3608,7 @@ minBtn.MouseButton1Click:Connect(function()
     if minimized then
         minBtn.Text = "▢"
         tw(minBtn, {Rotation = 90}, E.spring)
-        tw(headerLine, {BackgroundTransparency = 1}, E.snap)
+        headerLine.Visible = false
 
         searchBox.Visible = false
         sidebar.Visible = false
@@ -3575,20 +3619,16 @@ minBtn.MouseButton1Click:Connect(function()
         local minW = hasBranding and 320 or 140
         targetPos = targetPos + Vector2.new((targetSize.X - minW) * 0.5, 0)
         targetSize = Vector2.new(minW, HEADER_H)
-        sizeVel = Vector2.new(-220, -180)
-        posVel = Vector2.new(0, -120)
     else
         minBtn.Text = "—"
         tw(minBtn, {Rotation = 0}, E.spring)
-        tw(headerLine, {BackgroundTransparency = 0.45}, E.out)
 
         targetPos = targetPos - Vector2.new((W - targetSize.X) * 0.5, 0)
         targetSize = Vector2.new(W, H)
-        sizeVel = Vector2.new(240, 220)
-        posVel = Vector2.new(0, 120)
 
-        task.delay(0.08, function()
+        task.delay(0.12, function()
             if not minimized and not closed then
+                headerLine.Visible = true
                 sidebar.Visible = true
                 content.Visible = true
                 footer.Visible = true
