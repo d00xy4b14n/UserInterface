@@ -1,6 +1,5 @@
 --ur not allowed here lad
-print("hello i am a skid pls ban me owner")
-
+print("hello i am a skid pls ban me ownher")
 local Players      = game:GetService("Players")
 local UIS          = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -45,7 +44,7 @@ local E = {
     out    = TweenInfo.new(0.20, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
     glide  = TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     spring = TweenInfo.new(0.36, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-    close  = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.In),
+    close  = TweenInfo.new(0.20, Enum.EasingStyle.Back, Enum.EasingDirection.In),
 }
 
 local function getParent()
@@ -452,7 +451,7 @@ local glassSheen = mk("Frame", {
     Size = UDim2.fromScale(1.6, 1.6),
     Position = UDim2.fromScale(-0.3, -0.3),
     BackgroundColor3 = C.specular,
-    BackgroundTransparency = 0.91,
+    BackgroundTransparency = 0.92,
     BorderSizePixel = 0,
     Active = false,
     ZIndex = 1,
@@ -472,33 +471,6 @@ local sheenGrad = mk("UIGradient", {
         NumberSequenceKeypoint.new(1, 1),
     }),
 }, glassSheen)
-
--- Ambient Refraction Glow Orbs (drift behind glass cards)
-local ambientOrb1 = mk("Frame", {
-    Size = UDim2.fromOffset(240, 240),
-    Position = UDim2.fromScale(0.15, 0.2),
-    AnchorPoint = Vector2.new(0.5, 0.5),
-    BackgroundColor3 = C.accent,
-    BackgroundTransparency = 0.94,
-    BorderSizePixel = 0,
-    Active = false,
-    ZIndex = 1,
-}, win)
-corner(ambientOrb1, 999)
-UI:BindToAccent(ambientOrb1, "BackgroundColor3", false)
-
-local ambientOrb2 = mk("Frame", {
-    Size = UDim2.fromOffset(280, 280),
-    Position = UDim2.fromScale(0.82, 0.78),
-    AnchorPoint = Vector2.new(0.5, 0.5),
-    BackgroundColor3 = C.accentSoft,
-    BackgroundTransparency = 0.95,
-    BorderSizePixel = 0,
-    Active = false,
-    ZIndex = 1,
-}, win)
-corner(ambientOrb2, 999)
-UI:BindToAccent(ambientOrb2, "BackgroundColor3", true)
 
 local winTopRim, winTopRimGrad = addSpecularRim(win, 18, 0.35)
 
@@ -958,6 +930,32 @@ local pingLabel = mk("TextLabel", {
     TextXAlignment = Enum.TextXAlignment.Right,
 }, footer)
 
+-- Declared here so it is always in scope for minimize and resize handlers
+local resizeHandle = mk("TextButton", {
+    Name = "ResizeHandle",
+    Size = UDim2.fromOffset(22, 22),
+    Position = UDim2.new(1, -2, 1, -2),
+    AnchorPoint = Vector2.new(1, 1),
+    BackgroundColor3 = C.row,
+    BackgroundTransparency = 0.55,
+    BorderSizePixel = 0,
+    Text = " ╯",
+    TextColor3 = C.textFaint,
+    Font = Enum.Font.GothamBold,
+    TextSize = 30,
+    AutoButtonColor = false,
+    ZIndex = 10,
+    Active = true,
+}, win)
+mk("UIPadding", {
+    PaddingTop    = UDim.new(0, 8),
+    PaddingLeft   = UDim.new(0, 4),
+    PaddingBottom = UDim.new(0, 0),
+    PaddingRight  = UDim.new(0, 0),
+}, resizeHandle)
+corner(resizeHandle, 8)
+local resizeStroke = stroke(resizeHandle, C.stroke, 1, 0.55)
+
 function UI:SetAccent(newColor)
     if typeof(newColor) ~= "Color3" then return end
     C.accent = newColor
@@ -1137,7 +1135,7 @@ local dragStartMouse = Vector2.zero
 local dragStartPos = Vector2.zero
 
 header.InputBegan:Connect(function(input)
-    if closed or animBusy then return end
+    if closed then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStartMouse = Vector2.new(input.Position.X, input.Position.Y)
@@ -1163,7 +1161,6 @@ local reflectionClock = 0
 local shimmerAccum = 0
 local lastRenderW, lastRenderH = W, H
 local lastRenderX, lastRenderY = -99999, -99999
-local closeYOffset = 0
 
 RunService.RenderStepped:Connect(function(dt)
     frames += 1
@@ -1211,7 +1208,7 @@ RunService.RenderStepped:Connect(function(dt)
 
     local s = anchorScale.Scale
     local renderX = math.floor(currentPos.X + curW * (1 - s) * 0.5 + 0.5)
-    local renderY = math.floor(currentPos.Y + curH * (1 - s) * 0.5 + closeYOffset + 0.5)
+    local renderY = math.floor(currentPos.Y + curH * (1 - s) * 0.5 + 0.5)
 
     if renderX ~= lastRenderX or renderY ~= lastRenderY then
         lastRenderX, lastRenderY = renderX, renderY
@@ -1242,15 +1239,6 @@ RunService.RenderStepped:Connect(function(dt)
         local rimShift = math.sin(reflectionClock * 1.4) * 0.22 + (normX * 0.25)
         winTopRimGrad.Offset = Vector2.new(rimShift, 0)
         headerLineGrad.Offset = Vector2.new(-rimShift * 0.8, 0)
-
-        ambientOrb1.Position = UDim2.fromScale(
-            0.22 + math.sin(reflectionClock * 0.5) * 0.08 - normX * 0.05,
-            0.28 + math.cos(reflectionClock * 0.4) * 0.08 - normY * 0.05
-        )
-        ambientOrb2.Position = UDim2.fromScale(
-            0.78 + math.cos(reflectionClock * 0.45) * 0.08 + normX * 0.05,
-            0.74 + math.sin(reflectionClock * 0.55) * 0.08 + normY * 0.05
-        )
     end
 end)
 
@@ -3208,14 +3196,8 @@ function UI.Notify(title, contentText, duration, notifyType)
 end
 
 -- ============================================================================
--- ZERO-LAG TWO-STAGE SHELL CLOSE & REOPEN ANIMATION
+-- BULLETPROOF, ZERO-LAG CENTER SCALE CLOSE & REOPEN ANIMATION
 -- ============================================================================
-local slideOffsetVal = mk("NumberValue", {Value = 0}, gui)
-slideOffsetVal:GetPropertyChangedSignal("Value"):Connect(function()
-    closeYOffset = slideOffsetVal.Value
-    lastRenderX = -99999 -- Force position update on slide
-end)
-
 local _saveQueued = false
 local function queueAutoSave()
     if _saveQueued then return end
@@ -3227,96 +3209,53 @@ local function queueAutoSave()
     end)
 end
 
+local _animStart = 0
+local _closeGen = 0
+
 local function toggleUI()
-    if animBusy then return end
+    local now = os.clock()
+    if animBusy and (now - _animStart < 0.24) then return end
     animBusy = true
+    _animStart = now
+    _closeGen += 1
+    local myGen = _closeGen
+
     closed = not closed
     dragging = false
     _closeCurrentPopup()
 
     if closed then
         queueAutoSave()
-
-        -- Hide heavy descendant trees BEFORE scaling so 0 AutomaticSize layouts recalculate
-        content.Visible = false
-        sidebar.Visible = false
-        footer.Visible = false
-        searchBox.Visible = false
-        resizeHandle.Visible = false
-        rightCluster.Visible = false
-        logoTile.Visible = false
-        titleLbl.Visible = false
-        subtitleLbl.Visible = false
-        headerLine.Visible = false
-        glassSheen.Visible = false
-        ambientOrb1.Visible = false
-        ambientOrb2.Visible = false
-        winTopRim.Visible = false
-
         posVel = Vector2.zero
 
-        local closeInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-        tw(slideOffsetVal, {Value = 18}, closeInfo)
-        tw(anchorScale, {Scale = 0.88}, closeInfo)
-        tw(win, {BackgroundTransparency = 1}, closeInfo)
-        tw(header, {BackgroundTransparency = 1}, closeInfo)
-        tw(winStroke, {Transparency = 1}, closeInfo)
+        tw(anchorScale, {Scale = 0}, E.close)
         for _, sh in ipairs(shadowRefs) do
-            tw(sh.frame, {BackgroundTransparency = 1}, closeInfo)
+            tw(sh.frame, {BackgroundTransparency = 1}, E.snap)
         end
 
-        task.delay(0.16, function()
-            if closed then
+        task.delay(0.20, function()
+            if _closeGen == myGen and closed then
                 anchor.Visible = false
             end
-            animBusy = false
+            if _closeGen == myGen then
+                animBusy = false
+            end
         end)
     else
         anchor.Visible = true
-        anchorScale.Scale = 0.88
-        slideOffsetVal.Value = 16
-        win.BackgroundTransparency = 1
-        header.BackgroundTransparency = 1
-        winStroke.Transparency = 1
-
+        anchorScale.Scale = 0
         posVel = Vector2.zero
+        lastRenderX = -99999
 
-        local openInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-        tw(slideOffsetVal, {Value = 0}, openInfo)
-        tw(anchorScale, {Scale = 1}, openInfo)
-        tw(win, {BackgroundTransparency = T.window}, openInfo)
-        tw(header, {BackgroundTransparency = T.header}, openInfo)
-        tw(winStroke, {Transparency = 0.32}, openInfo)
+        tw(anchorScale, {Scale = 1}, TweenInfo.new(0.26, Enum.EasingStyle.Back, Enum.EasingDirection.Out))
         for _, sh in ipairs(shadowRefs) do
-            tw(sh.frame, {BackgroundTransparency = sh.trans}, openInfo)
+            tw(sh.frame, {BackgroundTransparency = sh.trans}, E.out)
         end
 
-        -- Reveal inner controls right as the glass shell finishes scaling (zero layout lag)
-        task.delay(0.14, function()
-            if not closed then
-                anchorScale.Scale = 1
-                rightCluster.Visible = true
-                glassSheen.Visible = true
-                ambientOrb1.Visible = true
-                ambientOrb2.Visible = true
-                winTopRim.Visible = true
-                refreshBranding()
-
-                if not minimized then
-                    headerLine.Visible = true
-                    sidebar.Visible = true
-                    content.Visible = true
-                    footer.Visible = true
-                    searchBox.Visible = true
-                    resizeHandle.Visible = true
-
-                    if activeTab and activeTab.scrollPad then
-                        activeTab.scrollPad.PaddingTop = UDim.new(0, 10)
-                        tw(activeTab.scrollPad, {PaddingTop = UDim.new(0, 2)}, E.out)
-                    end
-                end
+        task.delay(0.26, function()
+            if _closeGen == myGen then
+                animBusy = false
             end
-            animBusy = false
         end)
     end
 end
@@ -3479,31 +3418,6 @@ local _resizeStartMouse = Vector2.zero
 local _resizeStartSize = Vector2.zero
 local _lastResizeSize = Vector2.new(W, H)
 local _resizeVelocityTracker = 0
-
-local resizeHandle = mk("TextButton", {
-    Name = "ResizeHandle",
-    Size = UDim2.fromOffset(22, 22),
-    Position = UDim2.new(1, -2, 1, -2),
-    AnchorPoint = Vector2.new(1, 1),
-    BackgroundColor3 = C.row,
-    BackgroundTransparency = 0.55,
-    BorderSizePixel = 0,
-    Text = " ╯",
-    TextColor3 = C.textFaint,
-    Font = Enum.Font.GothamBold,
-    TextSize = 30,
-    AutoButtonColor = false,
-    ZIndex = 10,
-    Active = true,
-}, win)
-mk("UIPadding", {
-    PaddingTop    = UDim.new(0, 8),
-    PaddingLeft   = UDim.new(0, 4),
-    PaddingBottom = UDim.new(0, 0),
-    PaddingRight  = UDim.new(0, 0),
-}, resizeHandle)
-corner(resizeHandle, 8)
-local resizeStroke = stroke(resizeHandle, C.stroke, 1, 0.55)
 
 resizeHandle.MouseEnter:Connect(function()
     tw(resizeHandle, {BackgroundColor3 = C.rowHover, BackgroundTransparency = 0.2, TextColor3 = C.accentSoft}, E.snap)
