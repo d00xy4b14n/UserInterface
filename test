@@ -1,5 +1,4 @@
---ur not allowed here lad
-print("hello i am a skid pls ban me ownher")
+--ur not allowed here ladd
 local Players      = game:GetService("Players")
 local UIS          = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -41,10 +40,11 @@ local T = {
 
 local E = {
     snap   = TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    out    = TweenInfo.new(0.20, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    glide  = TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    spring = TweenInfo.new(0.36, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-    close  = TweenInfo.new(0.20, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+    out    = TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    glide  = TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+    spring = TweenInfo.new(0.40, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+    close  = TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+    fade   = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 }
 
 local function getParent()
@@ -407,16 +407,39 @@ for _, layer in ipairs(shadowLayers) do
     table.insert(shadowRefs, {frame = sh, trans = layer.trans})
 end
 
-local win = mk("Frame", {
+-- CanvasGroup with white GroupColor3 for 1-property full-window fade, paired with C.bg BgSurface
+local win = mk("CanvasGroup", {
     Name = "Window",
     Size = UDim2.fromScale(1, 1),
-    BackgroundColor3 = C.bg,
-    BackgroundTransparency = T.window,
+    BackgroundTransparency = 1,
+    GroupColor3 = Color3.fromRGB(255, 255, 255),
+    GroupTransparency = 0,
     BorderSizePixel = 0,
     Active = true,
     ClipsDescendants = true,
 }, anchor)
 corner(win, 16)
+
+-- Uses C.bg (11, 11, 14) so UIGradient multiplies to the exact deep obsidian black from iwantthis.lua
+local bgSurface = mk("Frame", {
+    Name = "BgSurface",
+    Size = UDim2.fromScale(1, 1),
+    BackgroundColor3 = C.bg,
+    BackgroundTransparency = T.window,
+    BorderSizePixel = 0,
+    Active = false,
+    ZIndex = 0,
+}, win)
+corner(bgSurface, 16)
+
+local winBgGrad = mk("UIGradient", {
+    Rotation = 65,
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, C.bgLight),
+        ColorSequenceKeypoint.new(0.5, C.bg),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20)),
+    }),
+}, bgSurface)
 
 -- Live Cursor-Tracked Specular Border Stroke
 local winStroke = stroke(win, C.specular, 1.2, 0.32)
@@ -436,22 +459,13 @@ local winStrokeGrad = mk("UIGradient", {
     }),
 }, winStroke)
 
-local winBgGrad = mk("UIGradient", {
-    Rotation = 65,
-    Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, C.bgLight),
-        ColorSequenceKeypoint.new(0.5, C.bg),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20)),
-    }),
-}, win)
-
 -- Live Parallax Glass Reflection Sheen Layer
 local glassSheen = mk("Frame", {
     Name = "GlassReflectionSheen",
     Size = UDim2.fromScale(1.6, 1.6),
     Position = UDim2.fromScale(-0.3, -0.3),
     BackgroundColor3 = C.specular,
-    BackgroundTransparency = 0.92,
+    BackgroundTransparency = 0.91,
     BorderSizePixel = 0,
     Active = false,
     ZIndex = 1,
@@ -472,7 +486,34 @@ local sheenGrad = mk("UIGradient", {
     }),
 }, glassSheen)
 
-local winTopRim, winTopRimGrad = addSpecularRim(win, 18, 0.35)
+-- Ambient Refraction Glow Orbs (drift behind glass cards)
+local ambientOrb1 = mk("Frame", {
+    Size = UDim2.fromOffset(240, 240),
+    Position = UDim2.fromScale(0.15, 0.2),
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    BackgroundColor3 = C.accent,
+    BackgroundTransparency = 0.94,
+    BorderSizePixel = 0,
+    Active = false,
+    ZIndex = 1,
+}, win)
+corner(ambientOrb1, 999)
+UI:BindToAccent(ambientOrb1, "BackgroundColor3", false)
+
+local ambientOrb2 = mk("Frame", {
+    Size = UDim2.fromOffset(280, 280),
+    Position = UDim2.fromScale(0.82, 0.78),
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    BackgroundColor3 = C.accentSoft,
+    BackgroundTransparency = 0.95,
+    BorderSizePixel = 0,
+    Active = false,
+    ZIndex = 1,
+}, win)
+corner(ambientOrb2, 999)
+UI:BindToAccent(ambientOrb2, "BackgroundColor3", true)
+
+local _, winTopRimGrad = addSpecularRim(win, 18, 0.35)
 
 local header = mk("Frame", {
     Name = "Header",
@@ -930,32 +971,6 @@ local pingLabel = mk("TextLabel", {
     TextXAlignment = Enum.TextXAlignment.Right,
 }, footer)
 
--- Declared here so it is always in scope for minimize and resize handlers
-local resizeHandle = mk("TextButton", {
-    Name = "ResizeHandle",
-    Size = UDim2.fromOffset(22, 22),
-    Position = UDim2.new(1, -2, 1, -2),
-    AnchorPoint = Vector2.new(1, 1),
-    BackgroundColor3 = C.row,
-    BackgroundTransparency = 0.55,
-    BorderSizePixel = 0,
-    Text = " ╯",
-    TextColor3 = C.textFaint,
-    Font = Enum.Font.GothamBold,
-    TextSize = 30,
-    AutoButtonColor = false,
-    ZIndex = 10,
-    Active = true,
-}, win)
-mk("UIPadding", {
-    PaddingTop    = UDim.new(0, 8),
-    PaddingLeft   = UDim.new(0, 4),
-    PaddingBottom = UDim.new(0, 0),
-    PaddingRight  = UDim.new(0, 0),
-}, resizeHandle)
-corner(resizeHandle, 8)
-local resizeStroke = stroke(resizeHandle, C.stroke, 1, 0.55)
-
 function UI:SetAccent(newColor)
     if typeof(newColor) ~= "Color3" then return end
     C.accent = newColor
@@ -1065,9 +1080,11 @@ local targetSize = Vector2.new(W, H)
 local currentSize = targetSize
 local sizeVel = Vector2.zero
 
+local stretchOffset = Vector2.zero
+local stretchVel = Vector2.zero
+
 local minimized = false
 local closed = false
-local animBusy = false
 
 anchor.Position = UDim2.fromOffset(currentPos.X, currentPos.Y)
 
@@ -1158,15 +1175,11 @@ end)
 
 local frames, elapsed = 0, 0
 local reflectionClock = 0
-local shimmerAccum = 0
-local lastRenderW, lastRenderH = W, H
-local lastRenderX, lastRenderY = -99999, -99999
 
 RunService.RenderStepped:Connect(function(dt)
     frames += 1
     elapsed += dt
     reflectionClock += dt
-    shimmerAccum += dt
 
     if elapsed >= 0.5 then
         fpsLabel.Text = string.format("%d fps", math.floor(frames / elapsed + 0.5))
@@ -1182,7 +1195,7 @@ RunService.RenderStepped:Connect(function(dt)
         currentPos = targetPos
         posVel = Vector2.zero
     else
-        local posForce = disp * 165 - posVel * 18
+        local posForce = disp * 150 - posVel * 16
         posVel = posVel + posForce * step
         currentPos = currentPos + posVel * step
     end
@@ -1197,35 +1210,44 @@ RunService.RenderStepped:Connect(function(dt)
         currentSize = currentSize + sizeVel * step
     end
 
-    local curW = math.max(120, math.floor(currentSize.X + 0.5))
-    local curH = math.max(HEADER_H, math.floor(currentSize.Y + 0.5))
+    local vx = math.abs(posVel.X)
+    local vy = math.abs(posVel.Y)
 
-    -- Only touch anchor.Size when resizing or minimizing (never during dragging or open/close)
-    if curW ~= lastRenderW or curH ~= lastRenderH then
-        lastRenderW, lastRenderH = curW, curH
-        anchor.Size = UDim2.fromOffset(curW, curH)
+    local desiredX = math.clamp(vx * 0.015 - vy * 0.005, -10, 22)
+    local desiredY = math.clamp(vy * 0.015 - vx * 0.005, -10, 22)
+    local desiredStretch = Vector2.new(desiredX, desiredY)
+
+    local stretchDiff = desiredStretch - stretchOffset
+    if not dragging and stretchDiff.Magnitude < 0.25 and stretchVel.Magnitude < 1.5 then
+        stretchOffset = Vector2.zero
+        stretchVel = Vector2.zero
+    else
+        local sForce = stretchDiff * 140 - stretchVel * 15
+        stretchVel = stretchVel + sForce * step
+        stretchOffset = stretchOffset + stretchVel * step
     end
 
-    local s = anchorScale.Scale
-    local renderX = math.floor(currentPos.X + curW * (1 - s) * 0.5 + 0.5)
-    local renderY = math.floor(currentPos.Y + curH * (1 - s) * 0.5 + 0.5)
+    local curW = math.max(120, math.floor(currentSize.X + stretchOffset.X + 0.5))
+    local curH = math.max(HEADER_H, math.floor(currentSize.Y + stretchOffset.Y + 0.5))
 
-    if renderX ~= lastRenderX or renderY ~= lastRenderY then
-        lastRenderX, lastRenderY = renderX, renderY
-        anchor.Position = UDim2.fromOffset(renderX, renderY)
-    end
+    local renderX = math.floor(currentPos.X - stretchOffset.X * 0.5 + 0.5)
+    local renderY = math.floor(currentPos.Y - stretchOffset.Y * 0.5 + 0.5)
 
-    -- Throttled Live Reflections (paused during open/close animations for 0-lag transitions)
-    if not closed and not animBusy and not minimized and shimmerAccum >= 0.022 then
-        shimmerAccum = 0
+    anchor.Size = UDim2.fromOffset(curW, curH)
+    anchor.Position = UDim2.fromOffset(renderX, renderY)
+
+    -- Live Reflections & Parallax Shimmer Calculation
+    if not closed then
         local mousePos = UIS:GetMouseLocation()
-        local winCenter = Vector2.new(currentPos.X + curW * 0.5, currentPos.Y + curH * 0.5)
+        local winCenter = Vector2.new(renderX + curW * 0.5, renderY + curH * 0.5)
         local rel = mousePos - winCenter
 
+        -- Point border reflection gradients toward cursor angle
         local angleDeg = math.deg(math.atan2(rel.Y, rel.X))
         winStrokeGrad.Rotation = angleDeg
         sidebarStrokeGrad.Rotation = (angleDeg * 0.6) + 45
 
+        -- Parallax glass sheen offset + idle breathing sweep
         local normX = math.clamp(rel.X / math.max(curW, 1), -0.6, 0.6)
         local normY = math.clamp(rel.Y / math.max(curH, 1), -0.6, 0.6)
         local idleWave = math.sin(reflectionClock * 0.85) * 0.14
@@ -1236,9 +1258,20 @@ RunService.RenderStepped:Connect(function(dt)
         )
         sheenGrad.Rotation = 30 + (normX * 14)
 
+        -- Shimmer top specular rims
         local rimShift = math.sin(reflectionClock * 1.4) * 0.22 + (normX * 0.25)
         winTopRimGrad.Offset = Vector2.new(rimShift, 0)
         headerLineGrad.Offset = Vector2.new(-rimShift * 0.8, 0)
+
+        -- Subtle background refraction orb drift
+        ambientOrb1.Position = UDim2.fromScale(
+            0.22 + math.sin(reflectionClock * 0.5) * 0.08 - normX * 0.05,
+            0.28 + math.cos(reflectionClock * 0.4) * 0.08 - normY * 0.05
+        )
+        ambientOrb2.Position = UDim2.fromScale(
+            0.78 + math.cos(reflectionClock * 0.45) * 0.08 + normX * 0.05,
+            0.74 + math.sin(reflectionClock * 0.55) * 0.08 + normY * 0.05
+        )
     end
 end)
 
@@ -2666,7 +2699,7 @@ function DependencyBox:SetupDependencies(deps)
             if self.frame.Visible ~= allMet then
                 self.frame.Visible = allMet
             end
-            task.wait(0.12)
+            task.wait(0.08)
         end
     end)
 end
@@ -3196,67 +3229,49 @@ function UI.Notify(title, contentText, duration, notifyType)
 end
 
 -- ============================================================================
--- BULLETPROOF, ZERO-LAG CENTER SCALE CLOSE & REOPEN ANIMATION
+-- PURE FADE-OVER CLOSE & REOPEN ANIMATION (ZERO SCALING, ZERO LAG)
 -- ============================================================================
 local _saveQueued = false
 local function queueAutoSave()
     if _saveQueued then return end
     _saveQueued = true
-    task.delay(0.45, function()
+    task.delay(0.4, function()
         _saveQueued = false
         local name = UI:GetAutoLoadName()
         if name and name ~= "" then UI:SaveConfig(name) end
     end)
 end
 
-local _animStart = 0
-local _closeGen = 0
-
+local _fadeGen = 0
 local function toggleUI()
-    local now = os.clock()
-    if animBusy and (now - _animStart < 0.24) then return end
-    animBusy = true
-    _animStart = now
-    _closeGen += 1
-    local myGen = _closeGen
-
+    _fadeGen += 1
+    local myGen = _fadeGen
     closed = not closed
     dragging = false
     _closeCurrentPopup()
 
     if closed then
         queueAutoSave()
-        posVel = Vector2.zero
 
-        tw(anchorScale, {Scale = 0}, E.close)
+        tw(win, {GroupTransparency = 1}, E.fade)
+        tw(winStroke, {Transparency = 1}, E.fade)
         for _, sh in ipairs(shadowRefs) do
-            tw(sh.frame, {BackgroundTransparency = 1}, E.snap)
+            tw(sh.frame, {BackgroundTransparency = 1}, E.fade)
         end
 
-        task.delay(0.20, function()
-            if _closeGen == myGen and closed then
+        task.delay(0.22, function()
+            if _fadeGen == myGen and closed then
                 anchor.Visible = false
-            end
-            if _closeGen == myGen then
-                animBusy = false
             end
         end)
     else
         anchor.Visible = true
-        anchorScale.Scale = 0
-        posVel = Vector2.zero
-        lastRenderX = -99999
 
-        tw(anchorScale, {Scale = 1}, TweenInfo.new(0.26, Enum.EasingStyle.Back, Enum.EasingDirection.Out))
+        tw(win, {GroupTransparency = 0}, E.fade)
+        tw(winStroke, {Transparency = 0.32}, E.fade)
         for _, sh in ipairs(shadowRefs) do
-            tw(sh.frame, {BackgroundTransparency = sh.trans}, E.out)
+            tw(sh.frame, {BackgroundTransparency = sh.trans}, E.fade)
         end
-
-        task.delay(0.26, function()
-            if _closeGen == myGen then
-                animBusy = false
-            end
-        end)
     end
 end
 
@@ -3419,6 +3434,31 @@ local _resizeStartSize = Vector2.zero
 local _lastResizeSize = Vector2.new(W, H)
 local _resizeVelocityTracker = 0
 
+local resizeHandle = mk("TextButton", {
+    Name = "ResizeHandle",
+    Size = UDim2.fromOffset(22, 22),
+    Position = UDim2.new(1, -2, 1, -2),
+    AnchorPoint = Vector2.new(1, 1),
+    BackgroundColor3 = C.row,
+    BackgroundTransparency = 0.55,
+    BorderSizePixel = 0,
+    Text = " ╯",
+    TextColor3 = C.textFaint,
+    Font = Enum.Font.GothamBold,
+    TextSize = 30,
+    AutoButtonColor = false,
+    ZIndex = 10,
+    Active = true,
+}, win)
+mk("UIPadding", {
+    PaddingTop    = UDim.new(0, 8),
+    PaddingLeft   = UDim.new(0, 4),
+    PaddingBottom = UDim.new(0, 0),
+    PaddingRight  = UDim.new(0, 0),
+}, resizeHandle)
+corner(resizeHandle, 8)
+local resizeStroke = stroke(resizeHandle, C.stroke, 1, 0.55)
+
 resizeHandle.MouseEnter:Connect(function()
     tw(resizeHandle, {BackgroundColor3 = C.rowHover, BackgroundTransparency = 0.2, TextColor3 = C.accentSoft}, E.snap)
     tw(resizeStroke, {Color = C.strokeGlow, Transparency = 0.2}, E.snap)
@@ -3512,7 +3552,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 minBtn.MouseButton1Click:Connect(function()
-    if closed or animBusy then return end
+    if closed then return end
     minimized = not minimized
     _closeCurrentPopup()
 
@@ -3522,7 +3562,7 @@ minBtn.MouseButton1Click:Connect(function()
     if minimized then
         minBtn.Text = "▢"
         tw(minBtn, {Rotation = 90}, E.spring)
-        headerLine.Visible = false
+        tw(headerLine, {BackgroundTransparency = 1}, E.snap)
 
         searchBox.Visible = false
         sidebar.Visible = false
@@ -3533,16 +3573,20 @@ minBtn.MouseButton1Click:Connect(function()
         local minW = hasBranding and 320 or 140
         targetPos = targetPos + Vector2.new((targetSize.X - minW) * 0.5, 0)
         targetSize = Vector2.new(minW, HEADER_H)
+        sizeVel = Vector2.new(-220, -180)
+        posVel = Vector2.new(0, -120)
     else
         minBtn.Text = "—"
         tw(minBtn, {Rotation = 0}, E.spring)
+        tw(headerLine, {BackgroundTransparency = 0.45}, E.out)
 
         targetPos = targetPos - Vector2.new((W - targetSize.X) * 0.5, 0)
         targetSize = Vector2.new(W, H)
+        sizeVel = Vector2.new(240, 220)
+        posVel = Vector2.new(0, 120)
 
-        task.delay(0.12, function()
+        task.delay(0.08, function()
             if not minimized and not closed then
-                headerLine.Visible = true
                 sidebar.Visible = true
                 content.Visible = true
                 footer.Visible = true
