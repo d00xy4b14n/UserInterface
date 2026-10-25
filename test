@@ -1,10 +1,11 @@
---sigma 
+--s
 local Players      = game:GetService("Players")
 local UIS          = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService   = game:GetService("RunService")
 local HttpService  = game:GetService("HttpService")
 local StatsService = game:GetService("Stats")
+local CAS          = game:GetService("ContextActionService")
 
 local C = {
     bg         = Color3.fromRGB(11, 11, 14),
@@ -214,7 +215,7 @@ local function keyName(keyCode)
         if keyCode == Enum.UserInputType.MouseButton2 then return "Mouse2" end
         if keyCode == Enum.UserInputType.MouseButton3 then return "Mouse3" end
     end
-    local name = keyCode.Name
+    local name = tostring(keyCode.Name or keyCode)
     local short = {
         LeftShift = "L.Shift", RightShift = "R.Shift",
         LeftControl = "L.Ctrl", RightControl = "R.Ctrl",
@@ -225,7 +226,94 @@ local function keyName(keyCode)
     return short[name] or name
 end
 
-local _anyKeybindListening = false
+-- ============================================================================
+-- 6-CHANNEL HARDWARE KEY & MOUSE POLLING ENGINE (100% EXECUTOR COMPATIBLE)
+-- ============================================================================
+local ALL_KEYCODES = {}
+local KEYCODE_BY_LOWER = {}
+for _, item in ipairs(Enum.KeyCode:GetEnumItems()) do
+    if item ~= Enum.KeyCode.Unknown then
+        table.insert(ALL_KEYCODES, item)
+        KEYCODE_BY_LOWER[item.Name:lower()] = item
+    end
+end
+KEYCODE_BY_LOWER[" "] = Enum.KeyCode.Space
+KEYCODE_BY_LOWER["\r"] = Enum.KeyCode.Return
+KEYCODE_BY_LOWER["\n"] = Enum.KeyCode.Return
+KEYCODE_BY_LOWER["\b"] = Enum.KeyCode.BackSpace
+KEYCODE_BY_LOWER["\27"] = Enum.KeyCode.Escape
+
+local function coerceKeyEnum(val)
+    if typeof(val) == "EnumItem" then return val end
+    if type(val) == "string" and val ~= "" then
+        local clean = val:gsub("^%s+", ""):gsub("%s+$", "")
+        if clean:lower() == "none" then return Enum.KeyCode.Unknown end
+        if clean:lower() == "mouse1" or clean:lower() == "mb1" then return Enum.UserInputType.MouseButton1 end
+        if clean:lower() == "mouse2" or clean:lower() == "mb2" then return Enum.UserInputType.MouseButton2 end
+        if clean:lower() == "mouse3" or clean:lower() == "mb3" then return Enum.UserInputType.MouseButton3 end
+        if Enum.KeyCode[clean] then return Enum.KeyCode[clean] end
+        if KEYCODE_BY_LOWER[clean:lower()] then return KEYCODE_BY_LOWER[clean:lower()] end
+    end
+    return Enum.KeyCode.Unknown
+end
+
+local _activeCaptureCallback = nil
+local _captureStartClock = 0
+local _prevPolledKeys = {}
+local _prevPolledMouse = {}
+local _lastDispatchedItem = nil
+local _lastDispatchedClock = 0
+
+local function _snapshotHeldInputs()
+    table.clear(_prevPolledKeys)
+    local okP, listP = pcall(UIS.GetKeysPressed, UIS)
+    if okP and type(listP) == "table" then
+        for i = 1, #listP do
+            local kc = listP[i] and listP[i].KeyCode
+            if kc then _prevPolledKeys[kc] = true end
+        end
+    end
+    for i = 1, #ALL_KEYCODES do
+        local kc = ALL_KEYCODES[i]
+        local okD, isD = pcall(UIS.IsKeyDown, UIS, kc)
+        if okD and isD then _prevPolledKeys[kc] = true end
+    end
+    for _, mb in ipairs({Enum.UserInputType.MouseButton1, Enum.UserInputType.MouseButton2, Enum.UserInputType.MouseButton3}) do
+        local okM, isM = pcall(UIS.IsMouseButtonPressed, UIS, mb)
+        _prevPolledMouse[mb] = (okM and isM) or false
+    end
+end
+
+local function _beginKeyCapture(cb)
+    _snapshotHeldInputs()
+    _prevPolledMouse[Enum.UserInputType.MouseButton1] = true -- ignore the click that opened capture
+    _captureStartClock = os.clock()
+    _activeCaptureCallback = cb
+
+    pcall(function()
+        CAS:BindActionAtPriority("__u3_KeyCapture", function(_, state, inputObj)
+            if not _activeCaptureCallback then
+                return Enum.ContextActionResult.Pass
+            end
+            if state == Enum.UserInputState.Begin and inputObj then
+                local kc = inputObj.KeyCode
+                if kc and kc ~= Enum.KeyCode.Unknown then
+                    local fn = _activeCaptureCallback
+                    task.spawn(fn, kc)
+                    return Enum.ContextActionResult.Sink
+                end
+            end
+            return Enum.ContextActionResult.Pass
+        end, false, Enum.ContextActionPriority.High.Value + 9999, unpack(ALL_KEYCODES))
+    end)
+end
+
+local function _endKeyCapture()
+    _activeCaptureCallback = nil
+    pcall(function()
+        CAS:UnbindAction("__u3_KeyCapture")
+    end)
+end
 
 local UI = {
     Controls = {},
@@ -1043,24 +1131,31 @@ toggleKeyPill.MouseLeave:Connect(function()
 end)
 
 toggleKeyPill.MouseButton1Click:Connect(function()
-    if rebindingToggleKey then return end
+    if rebindingToggleKey then
+        rebindingToggleKey = false
+        _anyKeybindListening = false
+        _endKeyCapture()
+        toggleKeyPill.Text = "Toggle UI: [" .. keyName(UI.ToggleKey) .. "]"
+        tw(toggleKeyPill, {BackgroundColor3 = C.row, BackgroundTransparency = 0.45, TextColor3 = C.textDim}, E.snap)
+        tw(togglePillStroke, {Color = C.stroke, Transparency = 0.6}, E.snap)
+        return
+    end
     rebindingToggleKey = true
     _anyKeybindListening = true
     toggleKeyPill.Text = "Press any key..."
     tw(toggleKeyPill, {BackgroundColor3 = C.accent, BackgroundTransparency = 0.1, TextColor3 = C.bg}, E.snap)
 
-    local conn
-    conn = UIS.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            conn:Disconnect()
-            if input.KeyCode ~= Enum.KeyCode.Escape and input.KeyCode ~= Enum.KeyCode.Unknown then
-                UI:SetToggleKey(input.KeyCode)
+    _beginKeyCapture(function(captured)
+        if typeof(captured) == "EnumItem" and captured.EnumType == Enum.KeyCode then
+            _endKeyCapture()
+            if captured ~= Enum.KeyCode.Escape and captured ~= Enum.KeyCode.Unknown then
+                UI:SetToggleKey(captured)
             else
                 toggleKeyPill.Text = "Toggle UI: [" .. keyName(UI.ToggleKey) .. "]"
             end
             tw(toggleKeyPill, {BackgroundColor3 = C.row, BackgroundTransparency = 0.45, TextColor3 = C.textDim}, E.snap)
             tw(togglePillStroke, {Color = C.stroke, Transparency = 0.6}, E.snap)
-            task.delay(0.1, function()
+            task.delay(0.12, function()
                 rebindingToggleKey = false
                 _anyKeybindListening = false
             end)
@@ -1293,11 +1388,77 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 -- ============================================================================
--- BULLETPROOF FADE-OVER ENGINE (ON STANDARD FRAME - 0 BLUE TINT, 0 LAG)
+-- BULLETPROOF FADE-OVER ENGINE + HARDWARE KEY POLLING IN RENDERSTEPPED
 -- ============================================================================
 local _fadeList = nil
 local _fadeAlpha = 0
 local _fading = false
+local toggleUI -- forward declaration
+
+local function _dispatchHardwareInput(enumItem)
+    if not enumItem or enumItem == Enum.KeyCode.Unknown then return end
+    local now = os.clock()
+    if _lastDispatchedItem == enumItem and (now - _lastDispatchedClock) < 0.08 then
+        return
+    end
+    _lastDispatchedItem = enumItem
+    _lastDispatchedClock = now
+
+    if _activeCaptureCallback then
+        local fn = _activeCaptureCallback
+        task.spawn(fn, enumItem)
+        return
+    end
+
+    if not _anyKeybindListening and not UIS:GetFocusedTextBox() then
+        if enumItem == UI.ToggleKey or enumItem == UI.SecondaryToggleKey then
+            if toggleUI then toggleUI() end
+        end
+    end
+end
+
+-- Channel 1: UIS.InputBegan (without strict UserInputType == Keyboard check)
+UIS.InputBegan:Connect(function(input)
+    if not input then return end
+    if input.KeyCode and input.KeyCode ~= Enum.KeyCode.Unknown then
+        _dispatchHardwareInput(input.KeyCode)
+    elseif input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.MouseButton2
+        or input.UserInputType == Enum.UserInputType.MouseButton3 then
+        if _activeCaptureCallback and (os.clock() - _captureStartClock) > 0.18 then
+            _dispatchHardwareInput(input.UserInputType)
+        end
+    end
+end)
+
+-- Channel 2: GuiObject-level InputBegan on Window
+win.InputBegan:Connect(function(input)
+    if not input then return end
+    if input.KeyCode and input.KeyCode ~= Enum.KeyCode.Unknown then
+        _dispatchHardwareInput(input.KeyCode)
+    end
+end)
+
+-- Channel 3: Legacy PlayerMouse.KeyDown fallback
+task.spawn(function()
+    local lp = Players.LocalPlayer
+    if not lp then
+        pcall(function() lp = Players.PlayerAdded:Wait() end)
+    end
+    if lp then
+        local okM, mouse = pcall(function() return lp:GetMouse() end)
+        if okM and mouse then
+            mouse.KeyDown:Connect(function(kStr)
+                if type(kStr) == "string" then
+                    local mapped = KEYCODE_BY_LOWER[kStr:lower()]
+                    if mapped then
+                        _dispatchHardwareInput(mapped)
+                    end
+                end
+            end)
+        end
+    end
+end)
 
 local function snapshotVisibleFadeTargets()
     local listOut = {}
@@ -1348,6 +1509,81 @@ RunService.RenderStepped:Connect(function(dt)
         frames, elapsed = 0, 0
     end
 
+    -- Channel 4 & 5: Direct Hardware Polling via GetKeysPressed() + IsKeyDown() + IsMouseButtonPressed()
+    local nowDown = {}
+    local okPressed, pressedList = pcall(UIS.GetKeysPressed, UIS)
+    if okPressed and type(pressedList) == "table" then
+        for i = 1, #pressedList do
+            local inp = pressedList[i]
+            local kc = inp and inp.KeyCode
+            if kc and kc ~= Enum.KeyCode.Unknown then
+                nowDown[kc] = true
+                if not _prevPolledKeys[kc] then
+                    _prevPolledKeys[kc] = true
+                    _dispatchHardwareInput(kc)
+                end
+            end
+        end
+    end
+
+    if _activeCaptureCallback then
+        -- Full 120-key hardware scan while waiting for keybind "..."
+        for i = 1, #ALL_KEYCODES do
+            local kc = ALL_KEYCODES[i]
+            if not nowDown[kc] then
+                local okD, isD = pcall(UIS.IsKeyDown, UIS, kc)
+                if okD and isD then
+                    nowDown[kc] = true
+                    if not _prevPolledKeys[kc] then
+                        _prevPolledKeys[kc] = true
+                        _dispatchHardwareInput(kc)
+                    end
+                end
+            end
+        end
+
+        if (os.clock() - _captureStartClock) > 0.18 then
+            for _, mb in ipairs({Enum.UserInputType.MouseButton1, Enum.UserInputType.MouseButton2, Enum.UserInputType.MouseButton3}) do
+                local okM, isM = pcall(UIS.IsMouseButtonPressed, UIS, mb)
+                local downM = (okM and isM) or false
+                if downM and not _prevPolledMouse[mb] then
+                    _prevPolledMouse[mb] = true
+                    _dispatchHardwareInput(mb)
+                elseif not downM then
+                    _prevPolledMouse[mb] = false
+                end
+            end
+        else
+            for _, mb in ipairs({Enum.UserInputType.MouseButton1, Enum.UserInputType.MouseButton2, Enum.UserInputType.MouseButton3}) do
+                local okM, isM = pcall(UIS.IsMouseButtonPressed, UIS, mb)
+                if not (okM and isM) then
+                    _prevPolledMouse[mb] = false
+                end
+            end
+        end
+    else
+        -- Poll ToggleKey & SecondaryToggleKey directly when not capturing
+        for _, tk in ipairs({UI.ToggleKey, UI.SecondaryToggleKey}) do
+            if tk and tk ~= Enum.KeyCode.Unknown and not nowDown[tk] then
+                local okD, isD = pcall(UIS.IsKeyDown, UIS, tk)
+                if okD and isD then
+                    nowDown[tk] = true
+                    if not _prevPolledKeys[tk] then
+                        _prevPolledKeys[tk] = true
+                        _dispatchHardwareInput(tk)
+                    end
+                end
+            end
+        end
+    end
+
+    for kc in pairs(_prevPolledKeys) do
+        if not nowDown[kc] then
+            _prevPolledKeys[kc] = nil
+        end
+    end
+
+    -- Fade-Over Animation Step
     if _fading and _fadeList then
         local speed = 5.5 -- ~0.18s smooth fade
         if closed then
@@ -1367,7 +1603,6 @@ RunService.RenderStepped:Connect(function(dt)
         if closed and _fadeAlpha >= 1 then
             _fading = false
             anchor.Visible = false
-            -- Restore original transparencies while hidden so reopening is always 100% clean
             for i = 1, #_fadeList do
                 local item = _fadeList[i]
                 if item.obj and item.obj.Parent then
@@ -1443,12 +1678,10 @@ RunService.RenderStepped:Connect(function(dt)
         local winCenter = Vector2.new(renderX + curW * 0.5, renderY + curH * 0.5)
         local rel = mousePos - winCenter
 
-        -- Point border reflection gradients toward cursor angle
         local angleDeg = math.deg(math.atan2(rel.Y, rel.X))
         winStrokeGrad.Rotation = angleDeg
         sidebarStrokeGrad.Rotation = (angleDeg * 0.6) + 45
 
-        -- Parallax glass sheen offset + idle breathing sweep
         local normX = math.clamp(rel.X / math.max(curW, 1), -0.6, 0.6)
         local normY = math.clamp(rel.Y / math.max(curH, 1), -0.6, 0.6)
         local idleWave = math.sin(reflectionClock * 0.85) * 0.14
@@ -1459,12 +1692,10 @@ RunService.RenderStepped:Connect(function(dt)
         )
         sheenGrad.Rotation = 30 + (normX * 14)
 
-        -- Shimmer top specular rims
         local rimShift = math.sin(reflectionClock * 1.4) * 0.22 + (normX * 0.25)
         winTopRimGrad.Offset = Vector2.new(rimShift, 0)
         headerLineGrad.Offset = Vector2.new(-rimShift * 0.8, 0)
 
-        -- Subtle background refraction orb drift
         ambientOrb1.Position = UDim2.fromScale(
             0.22 + math.sin(reflectionClock * 0.5) * 0.08 - normX * 0.05,
             0.28 + math.cos(reflectionClock * 0.4) * 0.08 - normY * 0.05
@@ -2679,7 +2910,7 @@ end
 
 function Section:Keybind(name, default, callback, opts)
     opts = opts or {}
-    local cur = (typeof(default) == "EnumItem" and default) or Enum.KeyCode.Unknown
+    local cur = coerceKeyEnum(default)
 
     local row = mk("Frame", {
         Size = UDim2.new(1, 0, 0, 32),
@@ -2733,13 +2964,12 @@ function Section:Keybind(name, default, callback, opts)
     }, row)
 
     local listening = false
-    local listenConn = nil
 
     local function stopListening()
         if not listening then return end
         listening = false
-        task.delay(0.05, function() _anyKeybindListening = false end)
-        if listenConn then listenConn:Disconnect(); listenConn = nil end
+        _endKeyCapture()
+        task.delay(0.08, function() _anyKeybindListening = false end)
         tw(keyChip, {BackgroundColor3 = C.bg, BackgroundTransparency = 0.25}, E.snap)
         tw(keyChipStroke, {Color = C.stroke, Transparency = 0.45}, E.snap)
         tw(keyLbl, {TextColor3 = C.accentSoft}, E.snap)
@@ -2747,7 +2977,10 @@ function Section:Keybind(name, default, callback, opts)
     end
 
     local function startListening()
-        if listening then stopListening(); return end
+        if listening then
+            stopListening()
+            return
+        end
         listening = true
         _anyKeybindListening = true
 
@@ -2756,34 +2989,36 @@ function Section:Keybind(name, default, callback, opts)
         tw(keyLbl, {TextColor3 = C.bg}, E.snap)
         keyLbl.Text = "..."
 
-        listenConn = UIS.InputBegan:Connect(function(input)
-            if input.KeyCode == Enum.KeyCode.Escape then
+        _beginKeyCapture(function(captured)
+            if not listening then return end
+
+            if captured == Enum.KeyCode.Escape then
                 stopListening()
                 return
             end
 
-            if input.KeyCode == Enum.KeyCode.BackSpace then
+            if captured == Enum.KeyCode.BackSpace then
                 cur = Enum.KeyCode.Unknown
                 stopListening()
                 if callback then task.spawn(callback, cur) end
                 return
             end
 
-            if input.UserInputType == Enum.UserInputType.MouseButton2 then
+            if captured == Enum.UserInputType.MouseButton2 then
                 stopListening()
                 return
             end
 
-            if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.MouseButton3 then
-                cur = input.UserInputType
+            if captured == Enum.UserInputType.MouseButton1
+            or captured == Enum.UserInputType.MouseButton3 then
+                cur = captured
                 stopListening()
                 if callback then task.spawn(callback, cur) end
                 return
             end
 
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                cur = input.KeyCode
+            if typeof(captured) == "EnumItem" and captured.EnumType == Enum.KeyCode then
+                cur = captured
                 stopListening()
                 if callback then task.spawn(callback, cur) end
             end
@@ -2803,11 +3038,10 @@ function Section:Keybind(name, default, callback, opts)
 
     return self:_track(name, row, {
         Set = function(_, v)
-            if typeof(v) == "EnumItem" then
-                cur = v
-                keyLbl.Text = keyName(cur)
-                if callback then task.spawn(callback, cur) end
-            end
+            local parsed = coerceKeyEnum(v)
+            cur = parsed
+            keyLbl.Text = keyName(cur)
+            if callback then task.spawn(callback, cur) end
         end,
         Get = function() return cur end,
         IsListening = function() return listening end,
@@ -3213,7 +3447,6 @@ local function _reflowToasts()
 end
 
 function UI.Notify(title, contentText, duration, notifyType, extraArg)
-    -- Support both UI.Notify(...) and UI:Notify(...) colon syntax
     if title == UI then
         title, contentText, duration, notifyType = contentText, duration, notifyType, extraArg
     end
@@ -3434,7 +3667,7 @@ function UI.Notify(title, contentText, duration, notifyType, extraArg)
 end
 
 -- ============================================================================
--- PURE FADE-OVER CLOSE & REOPEN HANDLER (NEVER BRICKS, NEVER DROPS FPS)
+-- PURE FADE-OVER CLOSE & REOPEN HANDLER
 -- ============================================================================
 local _saveQueued = false
 local function queueAutoSave()
@@ -3447,7 +3680,7 @@ local function queueAutoSave()
     end)
 end
 
-local function toggleUI()
+toggleUI = function()
     closed = not closed
     dragging = false
     _closeCurrentPopup()
@@ -3461,7 +3694,6 @@ local function toggleUI()
         _fading = true
     else
         if not anchor.Visible then
-            -- Make anchor visible BEFORE snapshotting so all visible children are captured properly
             anchor.Visible = true
             _fadeList = snapshotVisibleFadeTargets()
             _fadeAlpha = 1
@@ -3479,15 +3711,6 @@ end
 UI.Toggle = toggleUI
 
 closeBtn.MouseButton1Click:Connect(toggleUI)
-
-UIS.InputBegan:Connect(function(input)
-    if UIS:GetFocusedTextBox() or _anyKeybindListening then return end
-    if input.UserInputType == Enum.UserInputType.Keyboard then
-        if input.KeyCode == UI.ToggleKey or input.KeyCode == UI.SecondaryToggleKey then
-            toggleUI()
-        end
-    end
-end)
 
 local CONFIG_FOLDER = "d00xy4b14n's User Interface (hopper is a femboy)"
 local AUTOLOAD_FILE = CONFIG_FOLDER .. "/__autoload__.txt"
