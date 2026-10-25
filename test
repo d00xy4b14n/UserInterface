@@ -1,4 +1,4 @@
---sigma phonk mango edit L
+--sigma phonk mango edit but tuffer !!!lll
 local Players      = game:GetService("Players")
 local UIS          = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -44,7 +44,6 @@ local E = {
     glide  = TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     spring = TweenInfo.new(0.40, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
     close  = TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-    fade   = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 }
 
 local function getParent()
@@ -253,123 +252,6 @@ local gui = mk("ScreenGui", {
     DisplayOrder = 9999,
 }, getParent())
 
-local loadScreen = mk("Frame", {
-    Name = "LoadScreen",
-    Size = UDim2.fromScale(1, 1),
-    Position = UDim2.fromScale(0, 0),
-    BackgroundColor3 = Color3.fromRGB(7, 7, 10),
-    BackgroundTransparency = 0,
-    ZIndex = 9999,
-    BorderSizePixel = 0,
-}, gui)
-corner(loadScreen, 0)
-
-local loadCenter = mk("Frame", {
-    Size = UDim2.fromOffset(220, 120),
-    Position = UDim2.new(0.5, -110, 0.5, -60),
-    BackgroundTransparency = 1,
-}, loadScreen)
-
-local spinRing = mk("Frame", {
-    Size = UDim2.fromOffset(52, 52),
-    Position = UDim2.fromOffset(84, 8),
-    BackgroundTransparency = 1,
-    BorderSizePixel = 0,
-}, loadCenter)
-corner(spinRing, 26)
-local spinStroke = mk("UIStroke", {
-    Color = C.accent,
-    Thickness = 2.5,
-    Transparency = 0,
-    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-}, spinRing)
-
-local spinInner = mk("Frame", {
-    Size = UDim2.fromOffset(52, 52),
-    Position = UDim2.fromOffset(84, 8),
-    BackgroundColor3 = C.accent,
-    BackgroundTransparency = 0.88,
-    BorderSizePixel = 0,
-}, loadCenter)
-corner(spinInner, 26)
-
-local loadTitle = mk("TextLabel", {
-    Size = UDim2.new(1, 0, 0, 22),
-    Position = UDim2.fromOffset(0, 70),
-    BackgroundTransparency = 1,
-    Text = UI._u3name or "Loading...",
-    TextColor3 = C.text,
-    Font = Enum.Font.GothamBold,
-    TextSize = 15,
-    TextXAlignment = Enum.TextXAlignment.Center,
-}, loadCenter)
-
-local loadSub = mk("TextLabel", {
-    Size = UDim2.new(1, 0, 0, 14),
-    Position = UDim2.fromOffset(0, 96),
-    BackgroundTransparency = 1,
-    Text = "Initializing...",
-    TextColor3 = C.textFaint,
-    Font = Enum.Font.Gotham,
-    TextSize = 11,
-    TextXAlignment = Enum.TextXAlignment.Center,
-}, loadCenter)
-
-local progressBg = mk("Frame", {
-    Size = UDim2.fromOffset(180, 3),
-    Position = UDim2.new(0.5, -90, 1, -18),
-    BackgroundColor3 = C.row,
-    BackgroundTransparency = 0.3,
-    BorderSizePixel = 0,
-}, loadScreen)
-corner(progressBg, 2)
-
-local progressFill = mk("Frame", {
-    Size = UDim2.fromOffset(0, 3),
-    BackgroundColor3 = C.accent,
-    BackgroundTransparency = 0,
-    BorderSizePixel = 0,
-}, progressBg)
-corner(progressFill, 2)
-
-local spinAngle = 0
-local spinConn
-spinConn = RunService.RenderStepped:Connect(function(dt)
-    spinAngle = (spinAngle + dt * 220) % 360
-    spinRing.Rotation = spinAngle
-    spinInner.Rotation = -spinAngle * 0.4
-end)
-
-task.spawn(function()
-    local steps = {
-        {text = "Loading modules...",  delay = 0.5},
-        {text = "Building UI...",      delay = 0.9},
-        {text = "Applying config...",  delay = 0.7},
-        {text = "Ready!",              delay = 0.4},
-    }
-    local totalDelay = 0
-    for _, s in ipairs(steps) do totalDelay = totalDelay + s.delay end
-    local elapsed = 0
-
-    for _, step in ipairs(steps) do
-        task.wait(step.delay)
-        elapsed = elapsed + step.delay
-        loadSub.Text = step.text
-        tw(progressFill, {
-            Size = UDim2.fromOffset(math.floor(180 * (elapsed / totalDelay)), 3)
-        }, E.out)
-    end
-
-    task.wait(0.2)
-    spinConn:Disconnect()
-    tw(loadScreen, {BackgroundTransparency = 1}, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out))
-    tw(loadCenter, {Position = UDim2.new(0.5, -110, 0.5, -80)}, E.close)
-    tw(loadTitle, {TextTransparency = 1}, E.snap)
-    tw(loadSub, {TextTransparency = 1}, E.snap)
-    task.wait(0.5)
-    loadScreen:Destroy()
-end)
-
 local W, H = 640, 450
 local HEADER_H = 52
 local FOOTER_H = 28
@@ -407,39 +289,16 @@ for _, layer in ipairs(shadowLayers) do
     table.insert(shadowRefs, {frame = sh, trans = layer.trans})
 end
 
--- CanvasGroup with white GroupColor3 for 1-property full-window fade, paired with C.bg BgSurface
-local win = mk("CanvasGroup", {
+local win = mk("Frame", {
     Name = "Window",
     Size = UDim2.fromScale(1, 1),
-    BackgroundTransparency = 1,
-    GroupColor3 = Color3.fromRGB(255, 255, 255),
-    GroupTransparency = 0,
+    BackgroundColor3 = C.bg,
+    BackgroundTransparency = T.window,
     BorderSizePixel = 0,
     Active = true,
     ClipsDescendants = true,
 }, anchor)
 corner(win, 16)
-
--- Uses C.bg (11, 11, 14) so UIGradient multiplies to the exact deep obsidian black from iwantthis.lua
-local bgSurface = mk("Frame", {
-    Name = "BgSurface",
-    Size = UDim2.fromScale(1, 1),
-    BackgroundColor3 = C.bg,
-    BackgroundTransparency = T.window,
-    BorderSizePixel = 0,
-    Active = false,
-    ZIndex = 0,
-}, win)
-corner(bgSurface, 16)
-
-local winBgGrad = mk("UIGradient", {
-    Rotation = 65,
-    Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, C.bgLight),
-        ColorSequenceKeypoint.new(0.5, C.bg),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20)),
-    }),
-}, bgSurface)
 
 -- Live Cursor-Tracked Specular Border Stroke
 local winStroke = stroke(win, C.specular, 1.2, 0.32)
@@ -458,6 +317,15 @@ local winStrokeGrad = mk("UIGradient", {
         NumberSequenceKeypoint.new(1, 0.20),
     }),
 }, winStroke)
+
+local winBgGrad = mk("UIGradient", {
+    Rotation = 65,
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, C.bgLight),
+        ColorSequenceKeypoint.new(0.5, C.bg),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20)),
+    }),
+}, win)
 
 -- Live Parallax Glass Reflection Sheen Layer
 local glassSheen = mk("Frame", {
@@ -592,10 +460,6 @@ local hasBranding = false
 local function refreshBranding()
     local n = type(UI._u3name) == "string" and UI._u3name:match("^%s*(.-)%s*$") or ""
     local v = type(UI._u3version) == "string" and UI._u3version:match("^%s*(.-)%s*$") or ""
-
-    if n ~= "" and loadTitle and loadTitle.Parent then
-        loadTitle.Text = n
-    end
 
     if n == "" or v == "" then
         hasBranding = false
@@ -885,7 +749,7 @@ mk("Frame", {
     BorderSizePixel = 0,
 }, footer)
 
--- Auto-sizing Reopen Keybind Pill in Footer
+-- Reopen Keybind Pill in Footer
 local toggleKeyPill = mk("TextButton", {
     Size = UDim2.fromOffset(0, 20),
     Position = UDim2.fromOffset(12, 4),
@@ -950,7 +814,7 @@ toggleKeyPill.MouseButton1Click:Connect(function()
 end)
 
 local fpsLabel = mk("TextLabel", {
-    Size = UDim2.new(0, 40, 1, 0),
+    Size = UDim2.new(0, 60, 1, 0),
     Position = UDim2.new(1, -78, 0, 0),
     BackgroundTransparency = 1,
     Text = "— fps",
@@ -970,6 +834,31 @@ local pingLabel = mk("TextLabel", {
     TextSize = 11,
     TextXAlignment = Enum.TextXAlignment.Right,
 }, footer)
+
+local resizeHandle = mk("TextButton", {
+    Name = "ResizeHandle",
+    Size = UDim2.fromOffset(22, 22),
+    Position = UDim2.new(1, -2, 1, -2),
+    AnchorPoint = Vector2.new(1, 1),
+    BackgroundColor3 = C.row,
+    BackgroundTransparency = 0.55,
+    BorderSizePixel = 0,
+    Text = " ╯",
+    TextColor3 = C.textFaint,
+    Font = Enum.Font.GothamBold,
+    TextSize = 30,
+    AutoButtonColor = false,
+    ZIndex = 10,
+    Active = true,
+}, win)
+mk("UIPadding", {
+    PaddingTop    = UDim.new(0, 8),
+    PaddingLeft   = UDim.new(0, 4),
+    PaddingBottom = UDim.new(0, 0),
+    PaddingRight  = UDim.new(0, 0),
+}, resizeHandle)
+corner(resizeHandle, 8)
+local resizeStroke = stroke(resizeHandle, C.stroke, 1, 0.55)
 
 function UI:SetAccent(newColor)
     if typeof(newColor) ~= "Color3" then return end
@@ -1173,8 +1062,53 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
+-- ============================================================================
+-- PURE TRANSPARENCY FADE ENGINE (WORKS ON STANDARD FRAME WITH ZERO LAG)
+-- ============================================================================
+local fadeAlpha = 0
+local fadingActive = false
+local fadeTargets = nil
+
+local function captureFadeTargets()
+    local targets = {}
+    local function scan(obj)
+        if obj:IsA("GuiObject") and not obj.Visible then
+            return -- Skip hidden tabs & popups completely
+        end
+        if obj:IsA("UIStroke") then
+            if obj.Transparency < 1 then
+                table.insert(targets, {obj = obj, prop = "Transparency", base = obj.Transparency})
+            end
+        elseif obj:IsA("GuiObject") then
+            if obj.BackgroundTransparency < 1 then
+                table.insert(targets, {obj = obj, prop = "BackgroundTransparency", base = obj.BackgroundTransparency})
+            end
+            if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+                if obj.TextTransparency < 1 then
+                    table.insert(targets, {obj = obj, prop = "TextTransparency", base = obj.TextTransparency})
+                end
+            elseif obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+                if obj.ImageTransparency < 1 then
+                    table.insert(targets, {obj = obj, prop = "ImageTransparency", base = obj.ImageTransparency})
+                end
+            elseif obj:IsA("ScrollingFrame") then
+                if obj.ScrollBarImageTransparency < 1 then
+                    table.insert(targets, {obj = obj, prop = "ScrollBarImageTransparency", base = obj.ScrollBarImageTransparency})
+                end
+            end
+        end
+        for _, child in ipairs(obj:GetChildren()) do
+            scan(child)
+        end
+    end
+    scan(anchor)
+    return targets
+end
+
 local frames, elapsed = 0, 0
 local reflectionClock = 0
+local lastW, lastH = W, H
+local lastX, lastY = -99999, -99999
 
 RunService.RenderStepped:Connect(function(dt)
     frames += 1
@@ -1184,6 +1118,44 @@ RunService.RenderStepped:Connect(function(dt)
     if elapsed >= 0.5 then
         fpsLabel.Text = string.format("%d fps", math.floor(frames / elapsed + 0.5))
         frames, elapsed = 0, 0
+    end
+
+    if fadingActive and fadeTargets then
+        local FADE_SPEED = 5.5 -- ~0.18s full fade
+        if closed then
+            fadeAlpha = math.min(1, fadeAlpha + dt * FADE_SPEED)
+        else
+            fadeAlpha = math.max(0, fadeAlpha - dt * FADE_SPEED)
+        end
+
+        local e = 1 - (1 - fadeAlpha) * (1 - fadeAlpha)
+        for i = 1, #fadeTargets do
+            local t = fadeTargets[i]
+            if t.obj and t.obj.Parent then
+                t.obj[t.prop] = t.base + (1 - t.base) * e
+            end
+        end
+
+        if closed and fadeAlpha >= 1 then
+            fadingActive = false
+            anchor.Visible = false
+            for i = 1, #fadeTargets do
+                local t = fadeTargets[i]
+                if t.obj and t.obj.Parent then
+                    t.obj[t.prop] = t.base
+                end
+            end
+            fadeTargets = nil
+        elseif not closed and fadeAlpha <= 0 then
+            fadingActive = false
+            for i = 1, #fadeTargets do
+                local t = fadeTargets[i]
+                if t.obj and t.obj.Parent then
+                    t.obj[t.prop] = t.base
+                end
+            end
+            fadeTargets = nil
+        end
     end
 
     if not anchor.Visible then return end
@@ -1233,21 +1205,25 @@ RunService.RenderStepped:Connect(function(dt)
     local renderX = math.floor(currentPos.X - stretchOffset.X * 0.5 + 0.5)
     local renderY = math.floor(currentPos.Y - stretchOffset.Y * 0.5 + 0.5)
 
-    anchor.Size = UDim2.fromOffset(curW, curH)
-    anchor.Position = UDim2.fromOffset(renderX, renderY)
+    if curW ~= lastW or curH ~= lastH then
+        lastW, lastH = curW, curH
+        anchor.Size = UDim2.fromOffset(curW, curH)
+    end
+    if renderX ~= lastX or renderY ~= lastY then
+        lastX, lastY = renderX, renderY
+        anchor.Position = UDim2.fromOffset(renderX, renderY)
+    end
 
     -- Live Reflections & Parallax Shimmer Calculation
-    if not closed then
+    if not closed and not fadingActive then
         local mousePos = UIS:GetMouseLocation()
         local winCenter = Vector2.new(renderX + curW * 0.5, renderY + curH * 0.5)
         local rel = mousePos - winCenter
 
-        -- Point border reflection gradients toward cursor angle
         local angleDeg = math.deg(math.atan2(rel.Y, rel.X))
         winStrokeGrad.Rotation = angleDeg
         sidebarStrokeGrad.Rotation = (angleDeg * 0.6) + 45
 
-        -- Parallax glass sheen offset + idle breathing sweep
         local normX = math.clamp(rel.X / math.max(curW, 1), -0.6, 0.6)
         local normY = math.clamp(rel.Y / math.max(curH, 1), -0.6, 0.6)
         local idleWave = math.sin(reflectionClock * 0.85) * 0.14
@@ -1258,12 +1234,10 @@ RunService.RenderStepped:Connect(function(dt)
         )
         sheenGrad.Rotation = 30 + (normX * 14)
 
-        -- Shimmer top specular rims
         local rimShift = math.sin(reflectionClock * 1.4) * 0.22 + (normX * 0.25)
         winTopRimGrad.Offset = Vector2.new(rimShift, 0)
         headerLineGrad.Offset = Vector2.new(-rimShift * 0.8, 0)
 
-        -- Subtle background refraction orb drift
         ambientOrb1.Position = UDim2.fromScale(
             0.22 + math.sin(reflectionClock * 0.5) * 0.08 - normX * 0.05,
             0.28 + math.cos(reflectionClock * 0.4) * 0.08 - normY * 0.05
@@ -1284,6 +1258,52 @@ task.spawn(function()
         if ok and ping then
             pingLabel.Text = string.format("Ping: %d ms", ping)
         end
+    end
+end)
+
+minBtn.MouseButton1Click:Connect(function()
+    if closed or fadingActive then return end
+    minimized = not minimized
+    _closeCurrentPopup()
+
+    tw(minScale, {Scale = 0.82}, E.snap)
+    task.delay(0.1, function() tw(minScale, {Scale = 1}, E.spring) end)
+
+    if minimized then
+        minBtn.Text = "▢"
+        tw(minBtn, {Rotation = 90}, E.spring)
+        tw(headerLine, {BackgroundTransparency = 1}, E.snap)
+
+        searchBox.Visible = false
+        sidebar.Visible = false
+        content.Visible = false
+        footer.Visible = false
+        resizeHandle.Visible = false
+
+        local minW = hasBranding and 320 or 140
+        targetPos = targetPos + Vector2.new((targetSize.X - minW) * 0.5, 0)
+        targetSize = Vector2.new(minW, HEADER_H)
+        sizeVel = Vector2.new(-220, -180)
+        posVel = Vector2.new(0, -120)
+    else
+        minBtn.Text = "—"
+        tw(minBtn, {Rotation = 0}, E.spring)
+        tw(headerLine, {BackgroundTransparency = 0.45}, E.out)
+
+        targetPos = targetPos - Vector2.new((W - targetSize.X) * 0.5, 0)
+        targetSize = Vector2.new(W, H)
+        sizeVel = Vector2.new(240, 220)
+        posVel = Vector2.new(0, 120)
+
+        task.delay(0.08, function()
+            if not minimized and not closed then
+                sidebar.Visible = true
+                content.Visible = true
+                footer.Visible = true
+                searchBox.Visible = true
+                resizeHandle.Visible = true
+            end
+        end)
     end
 end)
 
@@ -3229,49 +3249,44 @@ function UI.Notify(title, contentText, duration, notifyType)
 end
 
 -- ============================================================================
--- PURE FADE-OVER CLOSE & REOPEN ANIMATION (ZERO SCALING, ZERO LAG)
+-- PURE FADE-OVER CLOSE & REOPEN HANDLER
 -- ============================================================================
 local _saveQueued = false
 local function queueAutoSave()
     if _saveQueued then return end
     _saveQueued = true
-    task.delay(0.4, function()
+    task.delay(0.45, function()
         _saveQueued = false
         local name = UI:GetAutoLoadName()
         if name and name ~= "" then UI:SaveConfig(name) end
     end)
 end
 
-local _fadeGen = 0
 local function toggleUI()
-    _fadeGen += 1
-    local myGen = _fadeGen
     closed = not closed
     dragging = false
     _closeCurrentPopup()
 
     if closed then
         queueAutoSave()
-
-        tw(win, {GroupTransparency = 1}, E.fade)
-        tw(winStroke, {Transparency = 1}, E.fade)
-        for _, sh in ipairs(shadowRefs) do
-            tw(sh.frame, {BackgroundTransparency = 1}, E.fade)
+        if not fadeTargets then
+            fadeTargets = captureFadeTargets()
+            fadeAlpha = 0
         end
-
-        task.delay(0.22, function()
-            if _fadeGen == myGen and closed then
-                anchor.Visible = false
-            end
-        end)
+        fadingActive = true
     else
-        anchor.Visible = true
-
-        tw(win, {GroupTransparency = 0}, E.fade)
-        tw(winStroke, {Transparency = 0.32}, E.fade)
-        for _, sh in ipairs(shadowRefs) do
-            tw(sh.frame, {BackgroundTransparency = sh.trans}, E.fade)
+        if not anchor.Visible then
+            fadeTargets = captureFadeTargets()
+            fadeAlpha = 1
+            for i = 1, #fadeTargets do
+                local t = fadeTargets[i]
+                if t.obj and t.obj.Parent then
+                    t.obj[t.prop] = 1
+                end
+            end
+            anchor.Visible = true
         end
+        fadingActive = true
     end
 end
 
@@ -3434,31 +3449,6 @@ local _resizeStartSize = Vector2.zero
 local _lastResizeSize = Vector2.new(W, H)
 local _resizeVelocityTracker = 0
 
-local resizeHandle = mk("TextButton", {
-    Name = "ResizeHandle",
-    Size = UDim2.fromOffset(22, 22),
-    Position = UDim2.new(1, -2, 1, -2),
-    AnchorPoint = Vector2.new(1, 1),
-    BackgroundColor3 = C.row,
-    BackgroundTransparency = 0.55,
-    BorderSizePixel = 0,
-    Text = " ╯",
-    TextColor3 = C.textFaint,
-    Font = Enum.Font.GothamBold,
-    TextSize = 30,
-    AutoButtonColor = false,
-    ZIndex = 10,
-    Active = true,
-}, win)
-mk("UIPadding", {
-    PaddingTop    = UDim.new(0, 8),
-    PaddingLeft   = UDim.new(0, 4),
-    PaddingBottom = UDim.new(0, 0),
-    PaddingRight  = UDim.new(0, 0),
-}, resizeHandle)
-corner(resizeHandle, 8)
-local resizeStroke = stroke(resizeHandle, C.stroke, 1, 0.55)
-
 resizeHandle.MouseEnter:Connect(function()
     tw(resizeHandle, {BackgroundColor3 = C.rowHover, BackgroundTransparency = 0.2, TextColor3 = C.accentSoft}, E.snap)
     tw(resizeStroke, {Color = C.strokeGlow, Transparency = 0.2}, E.snap)
@@ -3548,52 +3538,6 @@ UIS.InputChanged:Connect(function(input)
         W = newW
         H = newH
         targetSize = newSize
-    end
-end)
-
-minBtn.MouseButton1Click:Connect(function()
-    if closed then return end
-    minimized = not minimized
-    _closeCurrentPopup()
-
-    tw(minScale, {Scale = 0.82}, E.snap)
-    task.delay(0.1, function() tw(minScale, {Scale = 1}, E.spring) end)
-
-    if minimized then
-        minBtn.Text = "▢"
-        tw(minBtn, {Rotation = 90}, E.spring)
-        tw(headerLine, {BackgroundTransparency = 1}, E.snap)
-
-        searchBox.Visible = false
-        sidebar.Visible = false
-        content.Visible = false
-        footer.Visible = false
-        resizeHandle.Visible = false
-
-        local minW = hasBranding and 320 or 140
-        targetPos = targetPos + Vector2.new((targetSize.X - minW) * 0.5, 0)
-        targetSize = Vector2.new(minW, HEADER_H)
-        sizeVel = Vector2.new(-220, -180)
-        posVel = Vector2.new(0, -120)
-    else
-        minBtn.Text = "—"
-        tw(minBtn, {Rotation = 0}, E.spring)
-        tw(headerLine, {BackgroundTransparency = 0.45}, E.out)
-
-        targetPos = targetPos - Vector2.new((W - targetSize.X) * 0.5, 0)
-        targetSize = Vector2.new(W, H)
-        sizeVel = Vector2.new(240, 220)
-        posVel = Vector2.new(0, 120)
-
-        task.delay(0.08, function()
-            if not minimized and not closed then
-                sidebar.Visible = true
-                content.Visible = true
-                footer.Visible = true
-                searchBox.Visible = true
-                resizeHandle.Visible = true
-            end
-        end)
     end
 end)
 
