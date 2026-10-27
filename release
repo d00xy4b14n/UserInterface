@@ -1,4 +1,4 @@
---sigma phonk mango
+--sigma
 local Players      = game:GetService("Players")
 local UIS          = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -3181,6 +3181,7 @@ end
 function Section:AddToggle(o) o = o or {}; return _register(self:Toggle(o.Name, o.Default, o.Callback, o), o) end
 function Section:AddSlider(o) o = o or {}; return _register(self:Slider(o.Name, o.Min or 0, o.Max or 100, o.Default or 0, o.Callback, o), o) end
 function Section:AddDropdown(o) o = o or {}; return _register(self:Dropdown(o.Name, o.Options or {}, o.Default, o.Callback, o.Multi, o), o) end
+function Section:AddMultiDropdown(o) o = o or {} return _register(self:MultiDropdown(o.Name, o.Options or {}, o.Default, o.Callback, o), o) end
 function Section:AddInput(o) o = o or {}; return _register(self:Input(o.Name, o.Default, o.Callback, o), o) end
 function Section:AddColorpicker(o) o = o or {}; return _register(self:ColorPicker(o.Name, o.Default, o.Callback, o), o) end
 function Section:AddButton(o) o = o or {}; return self:Button(o.Name, o.Callback, o) end
@@ -3420,6 +3421,7 @@ end
 function Tab:AddToggle(o) return getTabSection(self):AddToggle(o) end
 function Tab:AddSlider(o) return getTabSection(self):AddSlider(o) end
 function Tab:AddDropdown(o) return getTabSection(self):AddDropdown(o) end
+function Tab:AddMultiDropdown(o) return getTabSection(self):AddMultiDropdown(o) end
 function Tab:AddButton(o) return getTabSection(self):AddButton(o) end
 function Tab:AddLabel(o) return getTabSection(self):AddLabel(o) end
 function Tab:AddParagraph(a, b) return getTabSection(self):AddParagraph(a, b) end
